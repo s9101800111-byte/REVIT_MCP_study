@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
@@ -75,6 +75,10 @@ namespace RevitMCP.Core
                     
                     case "get_all_levels":
                         result = GetAllLevels();
+                        break;
+
+                    case "create_level":
+                        result = CreateLevel(parameters);
                         break;
                     
                     case "get_element_info":
@@ -213,6 +217,18 @@ namespace RevitMCP.Core
                         result = GetViewTemplates(parameters);
                         break;
 
+                    case "get_dwg_column_layers":
+                        result = DwgColumnExecutor.GetDwgColumnLayers(_uiApp.ActiveUIDocument.Document);
+                        break;
+
+                    case "preview_dwg_columns":
+                        result = DwgColumnExecutor.PreviewDwgColumns(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
+                    case "create_columns_from_dwg":
+                        result = DwgColumnExecutor.CreateColumnsFromDwg(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
                     default:
                         throw new NotImplementedException($"未實作的命令: {request.CommandName}");
                 }
@@ -286,8 +302,8 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = wall.Id.IntegerValue,
-                    Message = $"成功建立牆，ID: {wall.Id.IntegerValue}"
+                    ElementId = wall.Id.GetIdValue(),
+                    Message = $"成功建立牆，ID: {wall.Id.GetIdValue()}"
                 };
             }
         }
@@ -326,7 +342,7 @@ namespace RevitMCP.Core
                 .OrderBy(l => l.Elevation)
                 .Select(l => new
                 {
-                    ElementId = l.Id.IntegerValue,
+                    ElementId = l.Id.GetIdValue(),
                     Name = l.Name,
                     Elevation = Math.Round(l.Elevation * 304.8, 2) // 轉換為公釐
                 })
@@ -340,6 +356,73 @@ namespace RevitMCP.Core
         }
 
         /// <summary>
+        /// 建立樓層 (Level)
+        /// </summary>
+        private object CreateLevel(JObject parameters)
+        {
+            Document doc = _uiApp.ActiveUIDocument.Document;
+
+            if (parameters["elevation"] == null)
+            {
+                throw new Exception("請指定 elevation（公釐）");
+            }
+
+            double elevationMm = parameters["elevation"].Value<double>();
+            double elevationFt = elevationMm / 304.8;
+            string customName = parameters["name"]?.Value<string>();
+
+            // 重複檢查（警告但仍建立）
+            var existing = new FilteredElementCollector(doc)
+                .OfClass(typeof(Level))
+                .Cast<Level>()
+                .ToList();
+
+            string warning = null;
+            var dupByElev = existing.FirstOrDefault(l => Math.Abs(l.Elevation - elevationFt) < 1e-6);
+            if (dupByElev != null)
+            {
+                warning = $"已有樓層 '{dupByElev.Name}' 在相同標高 {elevationMm} mm";
+            }
+            if (!string.IsNullOrEmpty(customName) && existing.Any(l => l.Name == customName))
+            {
+                warning = (warning == null ? "" : warning + "；") +
+                          $"已有樓層名稱 '{customName}'，Revit 會自動附加尾號";
+            }
+
+            Level newLevel;
+            using (Transaction trans = new Transaction(doc, "建立樓層"))
+            {
+                trans.Start();
+
+                newLevel = Level.Create(doc, elevationFt);
+
+                if (!string.IsNullOrEmpty(customName))
+                {
+                    try
+                    {
+                        newLevel.Name = customName;
+                    }
+                    catch (Exception ex)
+                    {
+                        warning = (warning == null ? "" : warning + "；") +
+                                  $"命名為 '{customName}' 失敗：{ex.Message}";
+                    }
+                }
+
+                trans.Commit();
+            }
+
+            return new
+            {
+                ElementId = newLevel.Id.GetIdValue(),
+                Name = newLevel.Name,
+                ElevationMm = Math.Round(newLevel.Elevation * 304.8, 2),
+                Warning = warning,
+                Message = $"成功建立樓層 '{newLevel.Name}'，標高 {Math.Round(newLevel.Elevation * 304.8, 2)} mm"
+            };
+        }
+
+        /// <summary>
         /// 取得元素資訊
         /// </summary>
         private object GetElementInfo(JObject parameters)
@@ -347,7 +430,7 @@ namespace RevitMCP.Core
             Document doc = _uiApp.ActiveUIDocument.Document;
             int elementId = parameters["elementId"]?.Value<int>() ?? 0;
 
-            Element element = doc.GetElement(new ElementId(elementId));
+            Element element = doc.GetElement(ElementIdCompat.Create(elementId));
             if (element == null)
             {
                 throw new Exception($"找不到元素 ID: {elementId}");
@@ -369,7 +452,7 @@ namespace RevitMCP.Core
 
             return new
             {
-                ElementId = element.Id.IntegerValue,
+                ElementId = element.Id.GetIdValue(),
                 Name = element.Name,
                 Category = element.Category?.Name,
                 Type = doc.GetElement(element.GetTypeId())?.Name,
@@ -390,13 +473,13 @@ namespace RevitMCP.Core
             {
                 trans.Start();
 
-                Element element = doc.GetElement(new ElementId(elementId));
+                Element element = doc.GetElement(ElementIdCompat.Create(elementId));
                 if (element == null)
                 {
                     throw new Exception($"找不到元素 ID: {elementId}");
                 }
 
-                doc.Delete(new ElementId(elementId));
+                doc.Delete(ElementIdCompat.Create(elementId));
                 trans.Commit();
 
                 return new
@@ -462,9 +545,9 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = floor.Id.IntegerValue,
+                    ElementId = floor.Id.GetIdValue(),
                     Level = level.Name,
-                    Message = $"成功建立樓板，ID: {floor.Id.IntegerValue}"
+                    Message = $"成功建立樓板，ID: {floor.Id.GetIdValue()}"
                 };
             }
         }
@@ -485,7 +568,7 @@ namespace RevitMCP.Core
                 throw new Exception("請指定參數名稱");
             }
 
-            Element element = doc.GetElement(new ElementId(elementId));
+            Element element = doc.GetElement(ElementIdCompat.Create(elementId));
             if (element == null)
             {
                 throw new Exception($"找不到元素 ID: {elementId}");
@@ -551,7 +634,7 @@ namespace RevitMCP.Core
             double locationX = parameters["locationX"]?.Value<double>() ?? 0;
             double locationY = parameters["locationY"]?.Value<double>() ?? 0;
 
-            Wall wall = doc.GetElement(new ElementId(wallId)) as Wall;
+            Wall wall = doc.GetElement(ElementIdCompat.Create(wallId)) as Wall;
             if (wall == null)
             {
                 throw new Exception($"找不到牆 ID: {wallId}");
@@ -591,10 +674,10 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = door.Id.IntegerValue,
+                    ElementId = door.Id.GetIdValue(),
                     DoorType = doorSymbol.Name,
                     WallId = wallId,
-                    Message = $"成功建立門，ID: {door.Id.IntegerValue}"
+                    Message = $"成功建立門，ID: {door.Id.GetIdValue()}"
                 };
             }
         }
@@ -609,7 +692,7 @@ namespace RevitMCP.Core
             double locationX = parameters["locationX"]?.Value<double>() ?? 0;
             double locationY = parameters["locationY"]?.Value<double>() ?? 0;
 
-            Wall wall = doc.GetElement(new ElementId(wallId)) as Wall;
+            Wall wall = doc.GetElement(ElementIdCompat.Create(wallId)) as Wall;
             if (wall == null)
             {
                 throw new Exception($"找不到牆 ID: {wallId}");
@@ -649,10 +732,10 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = window.Id.IntegerValue,
+                    ElementId = window.Id.GetIdValue(),
                     WindowType = windowSymbol.Name,
                     WallId = wallId,
-                    Message = $"成功建立窗，ID: {window.Id.IntegerValue}"
+                    Message = $"成功建立窗，ID: {window.Id.GetIdValue()}"
                 };
             }
         }
@@ -681,7 +764,7 @@ namespace RevitMCP.Core
 
                     return new
                     {
-                        ElementId = g.Id.IntegerValue,
+                        ElementId = g.Id.GetIdValue(),
                         Name = g.Name,
                         Direction = direction,
                         StartX = Math.Round(startPoint.X * 304.8, 2),  // 英尺 → 公釐
@@ -713,8 +796,8 @@ namespace RevitMCP.Core
                 .OfClass(typeof(FamilySymbol))
                 .Cast<FamilySymbol>()
                 .Where(fs => fs.Category != null && 
-                    (fs.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Columns ||
-                     fs.Category.Id.IntegerValue == (int)BuiltInCategory.OST_StructuralColumns))
+                    (fs.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_Columns ||
+                     fs.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_StructuralColumns))
                 .Select(fs =>
                 {
                     // 嘗試取得尺寸參數
@@ -735,7 +818,7 @@ namespace RevitMCP.Core
 
                     return new
                     {
-                        ElementId = fs.Id.IntegerValue,
+                        ElementId = fs.Id.GetIdValue(),
                         TypeName = fs.Name,
                         FamilyName = fs.FamilyName,
                         Category = fs.Category?.Name,
@@ -787,8 +870,8 @@ namespace RevitMCP.Core
                     .OfClass(typeof(FamilySymbol))
                     .Cast<FamilySymbol>()
                     .Where(fs => fs.Category != null &&
-                        (fs.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Columns ||
-                         fs.Category.Id.IntegerValue == (int)BuiltInCategory.OST_StructuralColumns))
+                        (fs.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_Columns ||
+                         fs.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_StructuralColumns))
                     .FirstOrDefault(fs => string.IsNullOrEmpty(columnTypeName) || 
                                           fs.Name == columnTypeName ||
                                           fs.FamilyName.Contains(columnTypeName));
@@ -837,13 +920,13 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = column.Id.IntegerValue,
+                    ElementId = column.Id.GetIdValue(),
                     ColumnType = columnSymbol.Name,
                     FamilyName = columnSymbol.FamilyName,
                     Level = bottomLevel.Name,
                     LocationX = x,
                     LocationY = y,
-                    Message = $"成功建立柱子，ID: {column.Id.IntegerValue}"
+                    Message = $"成功建立柱子，ID: {column.Id.GetIdValue()}"
                 };
             }
         }
@@ -862,7 +945,7 @@ namespace RevitMCP.Core
                 .Cast<FamilySymbol>()
                 .Select(fs => new
                 {
-                    ElementId = fs.Id.IntegerValue,
+                    ElementId = fs.Id.GetIdValue(),
                     TypeName = fs.Name,
                     FamilyName = fs.FamilyName,
                     IsActive = fs.IsActive
@@ -943,14 +1026,14 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    ElementId = furniture.Id.IntegerValue,
+                    ElementId = furniture.Id.GetIdValue(),
                     FurnitureType = furnitureSymbol.Name,
                     FamilyName = furnitureSymbol.FamilyName,
                     Level = level.Name,
                     LocationX = x,
                     LocationY = y,
                     Rotation = rotation,
-                    Message = $"成功放置家具，ID: {furniture.Id.IntegerValue}"
+                    Message = $"成功放置家具，ID: {furniture.Id.GetIdValue()}"
                 };
             }
         }
@@ -968,7 +1051,7 @@ namespace RevitMCP.Core
 
             if (roomId.HasValue)
             {
-                room = doc.GetElement(new ElementId(roomId.Value)) as Room;
+                room = doc.GetElement(ElementIdCompat.Create(roomId.Value)) as Room;
             }
             else if (!string.IsNullOrEmpty(roomName))
             {
@@ -999,7 +1082,7 @@ namespace RevitMCP.Core
 
             return new
             {
-                ElementId = room.Id.IntegerValue,
+                ElementId = room.Id.GetIdValue(),
                 Name = room.get_Parameter(BuiltInParameter.ROOM_NAME)?.AsString(),
                 Number = room.Number,
                 Level = doc.GetElement(room.LevelId)?.Name,
@@ -1054,7 +1137,7 @@ namespace RevitMCP.Core
                     
                     return new
                     {
-                        ElementId = r.Id.IntegerValue,
+                        ElementId = r.Id.GetIdValue(),
                         Name = roomName ?? "未命名",
                         Number = r.Number,
                         Area = Math.Round(areaM2, 2),
@@ -1075,7 +1158,7 @@ namespace RevitMCP.Core
             return new
             {
                 Level = targetLevel.Name,
-                LevelId = targetLevel.Id.IntegerValue,
+                LevelId = targetLevel.Id.GetIdValue(),
                 TotalRooms = rooms.Count,
                 TotalArea = Math.Round(totalArea, 2),
                 RoomsWithName = roomsWithName,
@@ -1132,12 +1215,12 @@ namespace RevitMCP.Core
                     // Tag.Room 屬性在某些視圖可能無效，或需用 Tag.IsOrphaned
                     if (tag.Room != null) 
                     {
-                        int roomId = tag.Room.Id.IntegerValue;
+                        int roomId = tag.Room.Id.GetIdValue();
                         if (!roomTagMap.ContainsKey(roomId))
                         {
                             roomTagMap[roomId] = new List<int>();
                         }
-                        roomTagMap[roomId].Add(tag.Id.IntegerValue);
+                        roomTagMap[roomId].Add(tag.Id.GetIdValue());
                     }
                 } catch {}
             }
@@ -1163,11 +1246,11 @@ namespace RevitMCP.Core
                                 IList<ElementId> insertIds = wall.FindInserts(true, false, false, false);
                                 foreach (ElementId insertId in insertIds)
                                 {
-                                    if (globalProcessedIds.Contains(insertId.IntegerValue)) continue;
+                                    if (globalProcessedIds.Contains(insertId.GetIdValue())) continue;
 
                                     Element insert = doc.GetElement(insertId);
                                     if (insert is FamilyInstance fi &&
-                                        (fi.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Windows))
+                                        (fi.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_Windows))
                                     {
                                         bool belongsToRoom = false;
 
@@ -1212,7 +1295,7 @@ namespace RevitMCP.Core
                                         }
 
                                         if (!belongsToRoom) continue;
-                                        globalProcessedIds.Add(insertId.IntegerValue);
+                                        globalProcessedIds.Add(insertId.GetIdValue());
 
                                         bool isExterior = wall.WallType.Function == WallFunction.Exterior;
 
@@ -1255,7 +1338,7 @@ namespace RevitMCP.Core
 
                                         openings.Add(new
                                         {
-                                            Id = insert.Id.IntegerValue,
+                                            Id = insert.Id.GetIdValue(),
                                             Name = insert.Name,
                                             FamilyName = fi.Symbol.FamilyName,
                                             Category = insert.Category.Name,
@@ -1264,7 +1347,7 @@ namespace RevitMCP.Core
                                             SillHeight = Math.Round(sillHeight, 2),
                                             HeadHeight = Math.Round(headHeight, 2),
                                             IsExterior = isExterior,
-                                            HostWallId = wall.Id.IntegerValue
+                                            HostWallId = wall.Id.GetIdValue()
                                         });
                                     }
                                 }
@@ -1275,14 +1358,14 @@ namespace RevitMCP.Core
 
                 // 取得房間標籤 ID
                 List<int> tagIds = new List<int>();
-                if (roomTagMap.ContainsKey(room.Id.IntegerValue))
+                if (roomTagMap.ContainsKey(room.Id.GetIdValue()))
                 {
-                    tagIds = roomTagMap[room.Id.IntegerValue];
+                    tagIds = roomTagMap[room.Id.GetIdValue()];
                 }
 
                 roomData.Add(new
                 {
-                    ElementId = room.Id.IntegerValue,
+                    ElementId = room.Id.GetIdValue(),
                     Name = room.get_Parameter(BuiltInParameter.ROOM_NAME)?.AsString() ?? "未命名",
                     Number = room.Number,
                     Level = doc.GetElement(room.LevelId)?.Name,
@@ -1372,7 +1455,7 @@ namespace RevitMCP.Core
 
                     return new
                     {
-                        ElementId = v.Id.IntegerValue,
+                        ElementId = v.Id.GetIdValue(),
                         Name = v.Name,
                         ViewType = v.ViewType.ToString(),
                         LevelName = levelName,
@@ -1410,7 +1493,7 @@ namespace RevitMCP.Core
 
             return new
             {
-                ElementId = activeView.Id.IntegerValue,
+                ElementId = activeView.Id.GetIdValue(),
                 Name = activeView.Name,
                 ViewType = activeView.ViewType.ToString(),
                 LevelName = levelName,
@@ -1426,7 +1509,7 @@ namespace RevitMCP.Core
             int viewId = parameters["viewId"]?.Value<int>() ?? 0;
             Document doc = _uiApp.ActiveUIDocument.Document;
 
-            View view = doc.GetElement(new ElementId(viewId)) as View;
+            View view = doc.GetElement(ElementIdCompat.Create(viewId)) as View;
             if (view == null)
             {
                 throw new Exception($"找不到視圖 ID: {viewId}");
@@ -1454,7 +1537,7 @@ namespace RevitMCP.Core
             if (parameters.ContainsKey("elementId"))
             {
                 int id = parameters["elementId"].Value<int>();
-                if (id > 0) elementIds.Add(new ElementId(id));
+                if (id > 0) elementIds.Add(ElementIdCompat.Create(id));
             }
 
             // 支援多個 ID
@@ -1463,7 +1546,7 @@ namespace RevitMCP.Core
                 var ids = parameters["elementIds"].Values<int>();
                 foreach (var id in ids)
                 {
-                    if (id > 0) elementIds.Add(new ElementId(id));
+                    if (id > 0) elementIds.Add(ElementIdCompat.Create(id));
                 }
             }
 
@@ -1493,14 +1576,14 @@ namespace RevitMCP.Core
             int elementId = parameters["elementId"]?.Value<int>() ?? 0;
             Document doc = _uiApp.ActiveUIDocument.Document;
 
-            Element element = doc.GetElement(new ElementId(elementId));
+            Element element = doc.GetElement(ElementIdCompat.Create(elementId));
             if (element == null)
             {
                 throw new Exception($"找不到元素 ID: {elementId}");
             }
 
             // 顯示元素（會自動縮放）
-            var elementIds = new List<ElementId> { new ElementId(elementId) };
+            var elementIds = new List<ElementId> { ElementIdCompat.Create(elementId) };
             _uiApp.ActiveUIDocument.ShowElements(elementIds);
 
             return new
@@ -1548,7 +1631,7 @@ namespace RevitMCP.Core
             int wallId = parameters["wallId"]?.Value<int>() ?? 0;
             Document doc = _uiApp.ActiveUIDocument.Document;
 
-            Wall wall = doc.GetElement(new ElementId(wallId)) as Wall;
+            Wall wall = doc.GetElement(ElementIdCompat.Create(wallId)) as Wall;
             if (wall == null)
             {
                 throw new Exception($"找不到牆 ID: {wallId}");
@@ -1601,7 +1684,7 @@ namespace RevitMCP.Core
             double endY = parameters["endY"]?.Value<double>() ?? 0;
             double offset = parameters["offset"]?.Value<double>() ?? 500;
 
-            View view = doc.GetElement(new ElementId(viewId)) as View;
+            View view = doc.GetElement(ElementIdCompat.Create(viewId)) as View;
             if (view == null)
             {
                 throw new Exception($"找不到視圖 ID: {viewId}");
@@ -1659,7 +1742,7 @@ namespace RevitMCP.Core
 
                 return new
                 {
-                    DimensionId = dim.Id.IntegerValue,
+                    DimensionId = dim.Id.GetIdValue(),
                     Value = Math.Round(dimValue, 2),
                     Unit = "mm",
                     ViewId = viewId,
@@ -1747,7 +1830,7 @@ namespace RevitMCP.Core
 
                     nearbyWalls.Add(new
                     {
-                        ElementId = wall.Id.IntegerValue,
+                        ElementId = wall.Id.GetIdValue(),
                         Name = wall.Name,
                         WallType = wall.WallType.Name,
                         Thickness = Math.Round(thickness, 2),
@@ -1810,7 +1893,7 @@ namespace RevitMCP.Core
                 JArray returnFields = parameters["returnFields"] as JArray;
                 
                 Document doc = _uiApp.ActiveUIDocument.Document;
-                ElementId targetViewId = viewId.HasValue ? new ElementId(viewId.Value) : doc.ActiveView.Id;
+                ElementId targetViewId = viewId.HasValue ? ElementIdCompat.Create(viewId.Value) : doc.ActiveView.Id;
                 
                 FilteredElementCollector collector = new FilteredElementCollector(doc, targetViewId);
                 
@@ -1961,14 +2044,14 @@ namespace RevitMCP.Core
             {
                 Document doc = _uiApp.ActiveUIDocument.Document;
                 int? viewId = parameters["viewId"]?.Value<int>();
-                ElementId targetViewId = viewId.HasValue ? new ElementId(viewId.Value) : doc.ActiveView.Id;
+                ElementId targetViewId = viewId.HasValue ? ElementIdCompat.Create(viewId.Value) : doc.ActiveView.Id;
 
                 var collector = new FilteredElementCollector(doc, targetViewId);
                 var categories = collector.WhereElementIsNotElementType()
                     .Where(e => e.Category != null)
                     .GroupBy(e => e.Category.Id.Value)
                     .Select(g => {
-                        ElementId catId = new ElementId(g.Key);
+                        ElementId catId = ElementIdCompat.Create(g.Key);
                         Category cat = Category.GetCategory(doc, catId);
                         return new { 
                             Name = cat?.Name ?? "未知品類",
@@ -1979,7 +2062,7 @@ namespace RevitMCP.Core
                     .OrderByDescending(c => c.Count)
                     .ToList();
 
-                return new { Success = true, ViewId = targetViewId.IntegerValue, Categories = categories };
+                return new { Success = true, ViewId = targetViewId.GetIdValue(), Categories = categories };
             }
             catch (Exception ex)
             {
@@ -2114,7 +2197,7 @@ namespace RevitMCP.Core
             View view;
             if (viewId.HasValue)
             {
-                view = doc.GetElement(new ElementId(viewId.Value)) as View;
+                view = doc.GetElement(ElementIdCompat.Create(viewId.Value)) as View;
                 if (view == null)
                     throw new Exception($"找不到視圖 ID: {viewId}");
             }
@@ -2124,7 +2207,7 @@ namespace RevitMCP.Core
             }
 
             // 取得元素
-            Element element = doc.GetElement(new ElementId(elementId));
+            Element element = doc.GetElement(ElementIdCompat.Create(elementId));
             if (element == null)
                 throw new Exception($"找不到元素 ID: {elementId}");
 
@@ -2219,7 +2302,7 @@ namespace RevitMCP.Core
                 }
 
                 // 應用覆寫
-                view.SetElementOverrides(new ElementId(elementId), overrideSettings);
+                view.SetElementOverrides(ElementIdCompat.Create(elementId), overrideSettings);
 
                 trans.Commit();
 
@@ -2227,7 +2310,7 @@ namespace RevitMCP.Core
                 {
                     Success = true,
                     ElementId = elementId,
-                    ViewId = view.Id.IntegerValue,
+                    ViewId = view.Id.GetIdValue(),
                     ViewType = view.ViewType.ToString(),
                     PatternMode = useCutPattern ? "Cut" : "Surface",
                     ViewName = view.Name,
@@ -2250,7 +2333,7 @@ namespace RevitMCP.Core
             View view;
             if (viewId.HasValue)
             {
-                view = doc.GetElement(new ElementId(viewId.Value)) as View;
+                view = doc.GetElement(ElementIdCompat.Create(viewId.Value)) as View;
                 if (view == null)
                     throw new Exception($"找不到視圖 ID: {viewId}");
             }
@@ -2282,11 +2365,11 @@ namespace RevitMCP.Core
                 int successCount = 0;
                 foreach (int elemId in elementIds)
                 {
-                    Element element = doc.GetElement(new ElementId(elemId));
+                    Element element = doc.GetElement(ElementIdCompat.Create(elemId));
                     if (element != null)
                     {
                         // 設定空的覆寫設定 = 重置為預設
-                        view.SetElementOverrides(new ElementId(elemId), new OverrideGraphicSettings());
+                        view.SetElementOverrides(ElementIdCompat.Create(elemId), new OverrideGraphicSettings());
                         successCount++;
                     }
                 }
@@ -2297,7 +2380,7 @@ namespace RevitMCP.Core
                 {
                     Success = true,
                     ClearedCount = successCount,
-                    ViewId = view.Id.IntegerValue,
+                    ViewId = view.Id.GetIdValue(),
                     ViewName = view.Name,
                     Message = $"已清除 {successCount} 個元素在視圖 '{view.Name}' 的圖形覆寫"
                 };
@@ -2348,9 +2431,9 @@ namespace RevitMCP.Core
             // 如果沒有提供 wallIds，則查詢視圖中所有牆體
             if (wallIds.Count == 0 && viewId.HasValue)
             {
-                var collector = new FilteredElementCollector(doc, new ElementId(viewId.Value));
+                var collector = new FilteredElementCollector(doc, ElementIdCompat.Create(viewId.Value));
                 var walls = collector.OfClass(typeof(Wall)).ToElements();
-                wallIds = walls.Select(w => w.Id.IntegerValue).ToList();
+                wallIds = walls.Select(w => w.Id.GetIdValue()).ToList();
             }
             
             if (wallIds.Count == 0)
@@ -2367,7 +2450,7 @@ namespace RevitMCP.Core
 
                 foreach (int wallId in wallIds)
                 {
-                    Wall wall = doc.GetElement(new ElementId(wallId)) as Wall;
+                    Wall wall = doc.GetElement(ElementIdCompat.Create(wallId)) as Wall;
                     if (wall == null) continue;
 
                     // 取得牆體的 BoundingBox 來找附近的柱子
@@ -2508,7 +2591,7 @@ namespace RevitMCP.Core
             {
                 var templateInfo = new Dictionary<string, object>
                 {
-                    ["ElementId"] = template.Id.IntegerValue,
+                    ["ElementId"] = template.Id.GetIdValue(),
                     ["Name"] = template.Name,
                     ["ViewType"] = template.ViewType.ToString(),
                     ["ViewFamily"] = template.ViewType.ToString()
@@ -2777,8 +2860,8 @@ namespace RevitMCP.Core
                                 // 記錄結果
                                 allResults.Add(new
                                 {
-                                    openingId = openingInfo.OpeningId.IntegerValue,
-                                    wallId = openingInfo.WallId?.IntegerValue,
+                                    openingId = openingInfo.OpeningId.GetIdValue(),
+                                    wallId = openingInfo.WallId?.GetIdValue(),
                                     openingType = openingInfo.OpeningType,
                                     location = new
                                     {

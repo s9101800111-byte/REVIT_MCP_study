@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Newtonsoft.Json.Linq;
 using System;
@@ -53,8 +53,8 @@ namespace RevitMCP.Core
                 if (element is FamilyInstance fi)
                 {
                     // 篩選門窗元素
-                    if (fi.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Windows ||
-                        fi.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Doors)
+                    if (fi.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_Windows ||
+                        fi.Category.Id.GetIdValue() == (int)BuiltInCategory.OST_Doors)
                     {
                         openings.Add(fi);
                     }

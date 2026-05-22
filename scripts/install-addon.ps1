@@ -172,7 +172,7 @@ $addonPath = $null
 $foundVersions = @()
 
 # 只檢查支援的版本（白名單方式，更安全）
-$supportedVersions = @("2024", "2023", "2022")
+$supportedVersions = @("2026", "2024", "2023", "2022")
 
 foreach ($version in $supportedVersions) {
     $testPath = Join-Path $appDataPath "Autodesk\Revit\Addins\$version"
@@ -231,15 +231,24 @@ Write-Host ""
 # 定義來源檔案路徑 (目錄重構後：MCP\ 單層結構)
 $sourceDllRelease = Join-Path $projectRoot "MCP\bin\Release\RevitMCP.dll"
 $sourceDllRelease2024 = Join-Path $projectRoot "MCP\bin\Release.2024\RevitMCP.dll"
+$sourceDllRelease2026 = Join-Path $projectRoot "MCP\bin\Release.2026\RevitMCP.dll"
 $sourceDllDebug = Join-Path $projectRoot "MCP\bin\Debug\RevitMCP.dll"
 $sourceAddin = Join-Path $projectRoot "MCP\RevitMCP.addin"
 $sourceAddin2024 = Join-Path $projectRoot "MCP\RevitMCP.2024.addin"
+$sourceAddin2026 = Join-Path $projectRoot "MCP\RevitMCP.2026.addin"
 
 # 決定使用哪個 DLL
 $sourceDll = $null
 $currentSourceAddin = $sourceAddin
 
-if ($revitVersion -eq "2024" -and (Test-Path $sourceDllRelease2024)) {
+if ($revitVersion -eq "2026" -and (Test-Path $sourceDllRelease2026)) {
+    $sourceDll = $sourceDllRelease2026
+    if (Test-Path $sourceAddin2026) {
+        $currentSourceAddin = $sourceAddin2026
+    }
+    Write-Host "✓ 找到 RevitMCP.dll (2026 Release 版本)" -ForegroundColor Green
+}
+elseif ($revitVersion -eq "2024" -and (Test-Path $sourceDllRelease2024)) {
     $sourceDll = $sourceDllRelease2024
     if (Test-Path $sourceAddin2024) {
         $currentSourceAddin = $sourceAddin2024
@@ -261,7 +270,10 @@ else {
     Write-Host "請先製作程式：" -ForegroundColor Yellow
     Write-Host "1. 打開命令提示字元" -ForegroundColor Yellow
     Write-Host "2. cd `"$projectRoot\MCP`"" -ForegroundColor Yellow
-    if ($revitVersion -eq "2024") {
+    if ($revitVersion -eq "2026") {
+        Write-Host "3. dotnet build -c Release RevitMCP.2026.csproj" -ForegroundColor Yellow
+    }
+    elseif ($revitVersion -eq "2024") {
         Write-Host "3. dotnet build -c Release RevitMCP.2024.csproj" -ForegroundColor Yellow
     }
     else {

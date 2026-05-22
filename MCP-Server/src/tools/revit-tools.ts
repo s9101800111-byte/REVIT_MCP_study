@@ -183,6 +183,26 @@ export function registerRevitTools(): Tool[] {
             },
         },
 
+        // 8.5 建立樓層 (Level)
+        {
+            name: "create_level",
+            description: "在 Revit 中建立一個新的樓層 (Level)。指定標高（公釐）與可選名稱；若名稱已存在 Revit 會自動附加尾號。",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    elevation: {
+                        type: "number",
+                        description: "樓層標高（公釐，會自動轉成 Revit 內部單位 feet）",
+                    },
+                    name: {
+                        type: "string",
+                        description: "樓層名稱（選填，例如 '3F'、'RF'）。未填則使用 Revit 預設名稱",
+                    },
+                },
+                required: ["elevation"],
+            },
+        },
+
         // 9. 建立門
         {
             name: "create_door",
@@ -859,6 +879,66 @@ export function registerRevitTools(): Tool[] {
                         default: true,
                     },
                 },
+            },
+        },
+
+        // 38. 取得 DWG 柱圖層清單
+        {
+            name: "get_dwg_column_layers",
+            description:
+                "掃描目前 Revit 平面視圖中所有 CAD 匯入/連結的圖層名稱，" +
+                "回傳圖層清單並自動推薦可能包含柱子的圖層。" +
+                "使用前請確認 Revit 已開啟平面視圖且已匯入 CAD 檔案。",
+            inputSchema: {
+                type: "object",
+                properties: {},
+            },
+        },
+
+        // 39. 預覽 DWG 柱解析結果
+        {
+            name: "preview_dwg_columns",
+            description:
+                "解析 CAD 指定圖層中的矩形幾何，預覽識別到的柱資訊（位置、寬度、深度、旋轉角）。" +
+                "此工具不會建立任何 Revit 元素，僅回傳解析結果供確認。" +
+                "建議在執行 create_columns_from_dwg 前先呼叫此工具確認數量與尺寸。",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    layerName: {
+                        type: "string",
+                        description: "CAD 圖層名稱，請從 get_dwg_column_layers 回傳的清單中選擇",
+                    },
+                },
+                required: ["layerName"],
+            },
+        },
+
+        // 40. 從 DWG 圖層建立柱
+        {
+            name: "create_columns_from_dwg",
+            description:
+                "從 CAD 指定圖層自動建立 Revit 結構柱或建築柱。" +
+                "會自動：辨識矩形輪廓、建立對應尺寸的族群類型、設定底頂樓層、套用旋轉角度。" +
+                "執行前建議先呼叫 preview_dwg_columns 確認識別結果。" +
+                "此操作會修改 Revit 模型，無法自動復原，請謹慎使用。",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    layerName: {
+                        type: "string",
+                        description: "CAD 圖層名稱，請從 get_dwg_column_layers 回傳的清單中選擇",
+                    },
+                    columnType: {
+                        type: "string",
+                        enum: ["structural", "architectural"],
+                        default: "structural",
+                        description:
+                            "柱類型：'structural'（結構柱，OST_StructuralColumns）或 " +
+                            "'architectural'（建築柱，OST_Columns）。預設為 structural",
+                    },
+                },
+                required: ["layerName"],
             },
         },
     ];
