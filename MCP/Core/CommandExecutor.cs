@@ -360,6 +360,19 @@ namespace RevitMCP.Core
                         result = TraceStairGeometry(parameters);
                         break;
 
+                    // === DWG 欄位匯入模組 ===
+                    case "get_dwg_column_layers":
+                        result = DwgColumnExecutor.GetDwgColumnLayers(_uiApp.ActiveUIDocument.Document);
+                        break;
+
+                    case "preview_dwg_columns":
+                        result = DwgColumnExecutor.PreviewDwgColumns(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
+                    case "create_columns_from_dwg":
+                        result = DwgColumnExecutor.CreateColumnsFromDwg(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
                     default:
                         throw new NotImplementedException($"未實作的命令: {request.CommandName}");
                 }
