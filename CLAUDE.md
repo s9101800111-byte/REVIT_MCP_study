@@ -33,7 +33,7 @@ These counts must be derived from source, not copied by memory.
 
 | Item | Current Count | Source of Truth |
 |---|---:|---|
-| Runtime MCP tools | 92 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
+| Runtime MCP tools | 96 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
 | Domain SOP files | 43 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
 | Claude skills | 20 | `.claude/skills/*/SKILL.md` |
 
