@@ -113,6 +113,14 @@ namespace RevitMCP.Core
                     case "list_seeds":
                         result = ListSeeds(parameters);
                         break;
+
+                    case "list_dimension_types":
+                        result = ListDimensionTypes(parameters);
+                        break;
+
+                    case "list_legend_views":
+                        result = ListLegendViews(parameters);
+                        break;
                     
                     case "get_all_grids":
                         result = GetAllGrids();
@@ -429,6 +437,17 @@ namespace RevitMCP.Core
                         result = CadLinkExecutor.LinkCadsByFloor(_uiApp.ActiveUIDocument.Document, parameters);
                         break;
 
+                    // === DWG 圖層批次建樑模組 ===
+                    case "get_dwg_beam_layers":
+                        result = DwgBeamExecutor.GetDwgBeamLayers(_uiApp.ActiveUIDocument.Document);
+                        break;
+                    case "preview_dwg_beams":
+                        result = DwgBeamExecutor.PreviewDwgBeams(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+                    case "create_beams_from_dwg":
+                        result = DwgBeamExecutor.CreateBeamsFromDwg(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
                     // === 連結模型與碰撞偵測模組 ===
                     case "get_linked_models":
                         result = GetLinkedModels();
@@ -463,6 +482,17 @@ namespace RevitMCP.Core
                     // === 樓板坡度分析（Issue #45, 原作者 yunchen-kt）===
                     case "analyze_floor_slopes":
                         result = FloorSlopeAnalyzer.Run(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
+                    // === RC 穿梁套管自動檢核（PR #68, 作者 鈺傑 SEven777-a）===
+                    case "analyze_beam_penetration":
+                        result = AnalyzeBeamPenetration(parameters);
+                        break;
+                    case "scan_penetrated_beams_in_view":
+                        result = ScanPenetratedBeamsInView(parameters);
+                        break;
+                    case "clear_previous_annotations":
+                        result = ClearPreviousAnnotations(parameters);
                         break;
 
                     default:
