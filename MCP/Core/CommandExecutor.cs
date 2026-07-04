@@ -265,6 +265,14 @@ namespace RevitMCP.Core
                         result = CreateViewSchedule(parameters);
                         break;
 
+                    case "list_schedules":
+                        result = ListSchedules(parameters);
+                        break;
+
+                    case "read_schedule":
+                        result = ReadSchedule(parameters);
+                        break;
+
                     case "get_selected_elements":
                         result = GetSelectedElements();
                         break;
@@ -275,6 +283,14 @@ namespace RevitMCP.Core
 
                     case "add_pipe_cap":
                         result = AddPipeCap(parameters);
+                        break;
+
+                    case "export_families":
+                        result = ExportFamilies(parameters);
+                        break;
+
+                    case "list_categories":
+                        result = ListCategories(parameters);
                         break;
 
                     // === 帷幕牆模組 (PR#11) ===
