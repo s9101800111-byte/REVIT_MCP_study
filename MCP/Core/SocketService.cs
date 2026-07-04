@@ -100,7 +100,9 @@ namespace RevitMCP.Core
                 // 在背景執行緒中等待連線
                 _ = Task.Run(async () => await AcceptConnectionsAsync(_cancellationTokenSource.Token));
 
-                TaskDialog.Show("MCP 服務", $"WebSocket 伺服器已啟動\n監聽: {_settings.Host}:{_settings.Port}");
+                // 成功啟動只記 log，不彈 modal TaskDialog：modal 對話框會阻塞 Revit UI 執行緒，
+                // 在 Core 熱重載情境下會卡住 ExternalEvent 造成命令 8s timeout（見 docs/core-reload-architecture.md §11）。
+                // 啟動結果已於上方 Logger.Info 記錄。收編自 ChimingLu（啟銘）熱重載分支的 UI-thread 安全修正。
             }
             catch (Exception ex)
             {
@@ -159,19 +161,30 @@ namespace RevitMCP.Core
             {
                 while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
-                    var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                    // 大封包接收：累積分段直到 EndOfMessage，避免單次 ReceiveAsync 截斷長訊息
+                    using (var ms = new System.IO.MemoryStream())
+                    {
+                        WebSocketReceiveResult result;
+                        do
+                        {
+                            result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
 
-                    if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        Logger.Debug($"[Socket] 接收到訊息: {message}");
-                        HandleMessage(message);
-                    }
-                    else if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", cancellationToken);
-                        Logger.Info("[Socket] MCP Server 已斷線");
-                        break;
+                            if (result.MessageType == WebSocketMessageType.Close)
+                            {
+                                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", cancellationToken);
+                                Logger.Info("[Socket] MCP Server 已斷線");
+                                return;
+                            }
+
+                            ms.Write(buffer, 0, result.Count);
+                        } while (!result.EndOfMessage);
+
+                        if (result.MessageType == WebSocketMessageType.Text)
+                        {
+                            string message = Encoding.UTF8.GetString(ms.ToArray());
+                            Logger.Debug($"[Socket] 接收到訊息 (長度: {message.Length}): {message}");
+                            HandleMessage(message);
+                        }
                     }
                 }
             }
