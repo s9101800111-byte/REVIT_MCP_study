@@ -43,6 +43,7 @@ npm-debug.log*
 # AI client 本機設定
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+.claude/.jury-state.json
 .gemini/
 
 # 開發暫存腳本（非穩定，不該共享）
