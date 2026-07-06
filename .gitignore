@@ -1,3 +1,6 @@
+# Jury gate per-machine verification state
+.claude/.jury-state.json
+
 # Build outputs
 MCP/MCP/bin/
 MCP/MCP/obj/

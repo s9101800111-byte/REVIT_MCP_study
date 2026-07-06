@@ -1,0 +1,9 @@
+{
+  "codeGlobs": ["**/*.ts", "**/*.tsx", "**/*.cs"],
+  "verify": [
+    { "name": "ts-build", "cwd": "MCP-Server", "command": "npm run build", "timeoutSec": 300 },
+    { "name": "cs-build", "cwd": "MCP", "command": "dotnet build -c Release.R26 RevitMCP.csproj", "timeoutSec": 600 }
+  ],
+  "requireReview": true,
+  "maxBlocks": 5
+}
