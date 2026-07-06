@@ -200,6 +200,15 @@ Before output:
 
 If tools are unavailable, say so and switch to generic guidance.
 
+### Jury Review Gate
+
+A Stop hook (`.claude/hooks/jury-stop-gate.mjs`) blocks finishing a session while uncommitted changes to `MCP-Server/src/**/*.ts` or `MCP/**/*.cs` are unverified:
+
+1. Changed code must build (`npm run build` for TS, `dotnet build -c Release.R26` for C#). A failing build blocks the stop with the error output.
+2. The current diff must then hold a PASS verdict from the `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) — an independent, read-only juror that reviews the diff on evidence only.
+3. Verification state lives in `.claude/.jury-state.json` (gitignored). Set `"review": "pass"` only after a real PASS verdict from the subagent in the same turn; never edit it to silence the gate.
+4. Any further code change voids prior verdicts (the gate fingerprints the diff). After 5 consecutive blocks on the same diff the gate gives up and allows the stop, so it cannot hard-lock a session.
+
 ### Domain Method Compliance
 
 When a task involves code compliance, regulation checks, engineering analysis, BIM quantity calculations, or a workflow covered by `domain/*.md`, the domain file defines the method.
@@ -331,6 +340,7 @@ Available Claude skills:
 - `/deploy-addon`
 - `/detail-component-sync`
 - `/detect-clashes`
+- `/dll-to-mcp-tool`
 - `/domain-diagram`
 - `/dwg-beam-import`
 - `/dwg-column-import`
