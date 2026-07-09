@@ -33,9 +33,9 @@ These counts must be derived from source, not copied by memory.
 
 | Item | Current Count | Source of Truth |
 |---|---:|---|
-| Runtime MCP tools | 103 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
-| Domain SOP files | 55 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
-| Claude skills | 25 | `.claude/skills/*/SKILL.md` |
+| Runtime MCP tools | 115 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
+| Domain SOP files | 58 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
+| Claude skills | 28 | `.claude/skills/*/SKILL.md` |
 
 When these numbers change, update `CLAUDE.md`, `README.md`, `README.en.md`, `docs/DOCUMENT_AUDIENCE_INVENTORY.md`, and any public site copy that makes grand-total claims. Then run `scripts/verify-qaqc.ps1 -SkipBuild -SkipDeploy`.
 
@@ -306,9 +306,12 @@ Read the matching file before applying a workflow or calculation.
 | section numbering, auto section numbering | `domain/section-auto-numbering.md` |
 | section datum, crop box, section adjustment | `domain/section-datum-adjustment.md` |
 | sheet, viewport, titleblock, sheet management | `domain/sheet-viewport-management.md` |
+| smoke detector, 偵煙探測器, 偵煙設置, smoke detector check, 消防探測器 | `domain/smoke-detector-check.md` |
 | smoke exhaust, smoke vent, effective opening | `domain/smoke-exhaust-review.md` |
 | stair compliance, stair headroom, stair check | `domain/stair-compliance-check.md` |
 | stair hidden line, stair graphics | `domain/stair-hidden-line-workflow.md` |
+| view link cleanup, 清理視圖, 隱藏連結, 關閉連結基準, link visibility | `domain/view-link-cleanup-workflow.md` |
+| local update, 本機更新, pull 後部署, 重新編譯部署, 環境專屬部署 | `domain/local-update-workflow.md` |
 | wall orientation, wall check | `domain/wall-check.md` |
 
 Meta and governance domain files:
@@ -353,9 +356,11 @@ Available Claude skills:
 - `/parking-check`
 - `/qa-review`
 - `/sheet-management`
+- `/smoke-detector-check`
 - `/smoke-exhaust`
 - `/stair-hidden-line`
 - `/wall-orientation-check`
+- `/wall-section-batch`
 
 Use the smallest relevant skill set. If a skill and a domain file conflict on the method, the domain file wins.
 

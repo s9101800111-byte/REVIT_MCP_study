@@ -9,9 +9,15 @@
  */
 
 import { RevitSocketClient } from "../socket.js";
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { registerRevitTools as registerProfileTools } from "./index.js";
 
-// Re-export from new module system
-export { registerRevitTools } from "./index.js";
+/**
+ * 依 Profile 註冊工具（實際 Profile 篩選邏輯在 index.ts）
+ */
+export function registerRevitTools(): Tool[] {
+    return registerProfileTools();
+}
 
 /**
  * 執行 Revit 工具
