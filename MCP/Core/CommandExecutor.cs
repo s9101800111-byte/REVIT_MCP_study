@@ -89,6 +89,10 @@ namespace RevitMCP.Core
                     case "get_element_info":
                         result = GetElementInfo(parameters);
                         break;
+
+                    case "get_door_window_coordinates":
+                        result = GetDoorWindowCoordinates(parameters);
+                        break;
                     
                     case "delete_element":
                         result = DeleteElement(parameters);
