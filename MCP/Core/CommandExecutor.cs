@@ -249,6 +249,15 @@ namespace RevitMCP.Core
                         result = JoinWallTops(parameters);
                         break;
 
+                    // === 解除幾何接合（劉可 PR#30 bundle②）===
+                    case "unjoin_column_joins":
+                        result = UnjoinColumnJoins(parameters);
+                        break;
+
+                    case "unjoin_element_joins":
+                        result = UnjoinElementJoins(parameters);
+                        break;
+
                     case "check_exterior_wall_openings":
                         result = CheckExteriorWallOpenings(parameters);
                         break;
@@ -383,6 +392,71 @@ namespace RevitMCP.Core
                         result = GetViewportMap();
                         break;
 
+                    // === 圖紙/視埠管理（劉可 PR#30 bundle①）===
+                    case "get_sheet_viewport_details":
+                        result = GetSheetViewportDetails(parameters);
+                        break;
+                    case "arrange_viewports_on_sheet":
+                        result = ArrangeViewportsOnSheet(parameters);
+                        break;
+                    case "scale_drafting_view_width":
+                        result = ScaleDraftingViewWidth(parameters);
+                        break;
+                    case "scale_drafting_view_height":
+                        result = ScaleDraftingViewHeight(parameters);
+                        break;
+                    case "create_floor_plans_from_template":
+                        result = CreateFloorPlansFromTemplate(parameters);
+                        break;
+                    case "batch_apply_view_template":
+                        result = BatchApplyViewTemplate(parameters);
+                        break;
+                    case "position_viewports_on_sheet":
+                        result = PositionViewportsOnSheet(parameters);
+                        break;
+                    case "debug_viewport_geometry":
+                        result = DebugViewportGeometry(parameters);
+                        break;
+                    case "align_titleblocks_on_sheets":
+                        result = AlignTitleblocksOnSheets(parameters);
+                        break;
+                    case "move_viewport_titles":
+                        result = MoveViewportTitles(parameters);
+                        break;
+
+                    // === 跨檔案圖紙複製（劉可 PR#30 bundle③）===
+                    case "read_source_file_sheets":
+                        result = ReadSourceFileSheets(parameters);
+                        break;
+                    case "copy_sheets_from_file":
+                        result = CopySheetsFromFile(parameters);
+                        break;
+                    case "sync_sheet_parameters_from_source":
+                        result = SyncSheetParametersFromSource(parameters);
+                        break;
+
+                    // === Excel/Legend 批次（劉可 PR#30 bundle④）===
+                    case "create_legends":
+                        result = CreateLegends(parameters);
+                        break;
+                    case "read_excel_tables":
+                        result = ReadExcelTables(parameters);
+                        break;
+                    case "import_excel_to_drafting_views":
+                        result = ImportExcelToDraftingViews(parameters);
+                        break;
+
+                    // === 材質批次修改（劉可 PR#30 bundle④）===
+                    case "get_types_by_category":
+                        result = GetTypesByCategory(parameters);
+                        break;
+                    case "batch_set_material":
+                        result = BatchSetMaterial(parameters);
+                        break;
+                    case "assign_existing_material":
+                        result = AssignExistingMaterial(parameters);
+                        break;
+
                     // === 詳圖元件模組 ===
                     case "get_detail_components":
                         result = GetDetailComponents(parameters);
@@ -395,6 +469,40 @@ namespace RevitMCP.Core
                         break;
                     case "list_family_symbols":
                         result = ListFamilySymbols(parameters);
+                        break;
+
+                    // === 詳圖項目複製 / 去重（劉可 PR#30 bundle②）===
+                    case "copy_detail_items_to_views":
+                        result = CopyDetailItemsToViews(parameters);
+                        break;
+                    case "dedup_detail_elements_in_view":
+                        result = DedupDetailElementsInView(parameters);
+                        break;
+
+                    // === 房間高度 / 視圖細部（劉可 PR#30 bundle⑥）===
+                    case "batch_set_room_height":
+                        result = BatchSetRoomHeight(parameters);
+                        break;
+                    case "set_scope_box_for_views":
+                        result = SetScopeBoxForViews(parameters);
+                        break;
+                    case "align_view_cropbox_to_element":
+                        result = AlignViewCropBoxToElement(parameters);
+                        break;
+                    case "shift_view_cropbox":
+                        result = ShiftViewCropBox(parameters);
+                        break;
+                    case "move_text_notes_in_views":
+                        result = MoveTextNotesInViews(parameters);
+                        break;
+                    case "hide_elements":
+                        result = HideElements(parameters);
+                        break;
+                    case "unhide_elements":
+                        result = UnhideElements(parameters);
+                        break;
+                    case "set_category_visibility":
+                        result = SetCategoryVisibility(parameters);
                         break;
 
                     // === 尺寸標註模組 ===
