@@ -89,6 +89,10 @@ namespace RevitMCP.Core
                     case "get_element_info":
                         result = GetElementInfo(parameters);
                         break;
+
+                    case "get_door_window_coordinates":
+                        result = GetDoorWindowCoordinates(parameters);
+                        break;
                     
                     case "delete_element":
                         result = DeleteElement(parameters);
@@ -249,6 +253,15 @@ namespace RevitMCP.Core
                         result = JoinWallTops(parameters);
                         break;
 
+                    // === 解除幾何接合（劉可 PR#30 bundle②）===
+                    case "unjoin_column_joins":
+                        result = UnjoinColumnJoins(parameters);
+                        break;
+
+                    case "unjoin_element_joins":
+                        result = UnjoinElementJoins(parameters);
+                        break;
+
                     case "check_exterior_wall_openings":
                         result = CheckExteriorWallOpenings(parameters);
                         break;
@@ -313,6 +326,22 @@ namespace RevitMCP.Core
                         result = CreateFacadeFromAnalysis(parameters);
                         break;
 
+                    // === 牆面平行剖面 ===
+                    case "create_parallel_section_view":
+                        result = CreateParallelSectionView(parameters);
+                        break;
+                    case "batch_create_wall_sections":
+                        result = BatchCreateWallSections(parameters);
+                        break;
+
+                    // === 偵煙探測器設置檢討 ===
+                    case "analyze_smoke_detectors":
+                        result = AnalyzeSmokeDetectors(parameters);
+                        break;
+                    case "visualize_detector_results":
+                        result = VisualizeDetectorResults(parameters);
+                        break;
+
                     // === 排煙窗模組 (PR#12) ===
                     case "check_smoke_exhaust_windows":
                         result = CheckSmokeExhaustWindows(parameters);
@@ -367,6 +396,71 @@ namespace RevitMCP.Core
                         result = GetViewportMap();
                         break;
 
+                    // === 圖紙/視埠管理（劉可 PR#30 bundle①）===
+                    case "get_sheet_viewport_details":
+                        result = GetSheetViewportDetails(parameters);
+                        break;
+                    case "arrange_viewports_on_sheet":
+                        result = ArrangeViewportsOnSheet(parameters);
+                        break;
+                    case "scale_drafting_view_width":
+                        result = ScaleDraftingViewWidth(parameters);
+                        break;
+                    case "scale_drafting_view_height":
+                        result = ScaleDraftingViewHeight(parameters);
+                        break;
+                    case "create_floor_plans_from_template":
+                        result = CreateFloorPlansFromTemplate(parameters);
+                        break;
+                    case "batch_apply_view_template":
+                        result = BatchApplyViewTemplate(parameters);
+                        break;
+                    case "position_viewports_on_sheet":
+                        result = PositionViewportsOnSheet(parameters);
+                        break;
+                    case "debug_viewport_geometry":
+                        result = DebugViewportGeometry(parameters);
+                        break;
+                    case "align_titleblocks_on_sheets":
+                        result = AlignTitleblocksOnSheets(parameters);
+                        break;
+                    case "move_viewport_titles":
+                        result = MoveViewportTitles(parameters);
+                        break;
+
+                    // === 跨檔案圖紙複製（劉可 PR#30 bundle③）===
+                    case "read_source_file_sheets":
+                        result = ReadSourceFileSheets(parameters);
+                        break;
+                    case "copy_sheets_from_file":
+                        result = CopySheetsFromFile(parameters);
+                        break;
+                    case "sync_sheet_parameters_from_source":
+                        result = SyncSheetParametersFromSource(parameters);
+                        break;
+
+                    // === Excel/Legend 批次（劉可 PR#30 bundle④）===
+                    case "create_legends":
+                        result = CreateLegends(parameters);
+                        break;
+                    case "read_excel_tables":
+                        result = ReadExcelTables(parameters);
+                        break;
+                    case "import_excel_to_drafting_views":
+                        result = ImportExcelToDraftingViews(parameters);
+                        break;
+
+                    // === 材質批次修改（劉可 PR#30 bundle④）===
+                    case "get_types_by_category":
+                        result = GetTypesByCategory(parameters);
+                        break;
+                    case "batch_set_material":
+                        result = BatchSetMaterial(parameters);
+                        break;
+                    case "assign_existing_material":
+                        result = AssignExistingMaterial(parameters);
+                        break;
+
                     // === 詳圖元件模組 ===
                     case "get_detail_components":
                         result = GetDetailComponents(parameters);
@@ -384,6 +478,40 @@ namespace RevitMCP.Core
                     // === 門窗型別批次建立模組 ===
                     case "create_opening_types":
                         result = CreateOpeningTypes(parameters);
+                        break;
+
+                    // === 詳圖項目複製 / 去重（劉可 PR#30 bundle②）===
+                    case "copy_detail_items_to_views":
+                        result = CopyDetailItemsToViews(parameters);
+                        break;
+                    case "dedup_detail_elements_in_view":
+                        result = DedupDetailElementsInView(parameters);
+                        break;
+
+                    // === 房間高度 / 視圖細部（劉可 PR#30 bundle⑥）===
+                    case "batch_set_room_height":
+                        result = BatchSetRoomHeight(parameters);
+                        break;
+                    case "set_scope_box_for_views":
+                        result = SetScopeBoxForViews(parameters);
+                        break;
+                    case "align_view_cropbox_to_element":
+                        result = AlignViewCropBoxToElement(parameters);
+                        break;
+                    case "shift_view_cropbox":
+                        result = ShiftViewCropBox(parameters);
+                        break;
+                    case "move_text_notes_in_views":
+                        result = MoveTextNotesInViews(parameters);
+                        break;
+                    case "hide_elements":
+                        result = HideElements(parameters);
+                        break;
+                    case "unhide_elements":
+                        result = UnhideElements(parameters);
+                        break;
+                    case "set_category_visibility":
+                        result = SetCategoryVisibility(parameters);
                         break;
 
                     // === 尺寸標註模組 ===
@@ -434,6 +562,7 @@ namespace RevitMCP.Core
                         result = DwgColumnExecutor.CreateColumnsFromDwg(_uiApp.ActiveUIDocument.Document, parameters);
                         break;
 
+                    // === CAD 連結模組 ===
                     case "link_cad_to_view":
                         result = CadLinkExecutor.LinkCadToView(_uiApp.ActiveUIDocument.Document, parameters);
                         break;
@@ -498,6 +627,64 @@ namespace RevitMCP.Core
                         break;
                     case "clear_previous_annotations":
                         result = ClearPreviousAnnotations(parameters);
+                        break;
+
+#if REVIT2024_OR_GREATER
+                    case "grade_toposolid_to_floors":
+                        result = GradeToposolidToFloors(parameters);
+                        break;
+#endif
+
+                    // === 施工架/隔間/門窗/RC填充 算量 + 圖案轉換 (PR #79/#81/#82, 作者 Jacky820507) ===
+                    case "calculate_exterior_wall_scaffold_perimeter":
+                        result = CalculateExteriorWallScaffoldPerimeter(parameters);
+                        break;
+                    case "calculate_room_scaffold_perimeters":
+                        result = CalculateRoomScaffoldPerimeters(parameters);
+                        break;
+                    case "calculate_selected_detail_line_perimeter":
+                        result = CalculateSelectedDetailLinePerimeter(parameters);
+                        break;
+                    case "analyze_tall_partition_rooms":
+                        result = AnalyzeTallPartitionRooms(parameters);
+                        break;
+                    case "duplicate_views_with_detailing":
+                        result = DuplicateViewsWithDetailing(parameters);
+                        break;
+                    case "create_room_filled_regions":
+                        result = CreateRoomFilledRegions(parameters);
+                        break;
+                    case "get_room_door_counts":
+                        result = GetRoomDoorCounts(parameters);
+                        break;
+                    case "get_room_window_counts":
+                        result = GetRoomWindowCounts(parameters);
+                        break;
+                    case "auto_convert_rotated_viewport_patterns":
+                        result = AutoConvertRotatedViewportPatterns();
+                        break;
+                    case "batch_create_rc_filled_region":
+                        result = BatchCreateRCFilledRegions(parameters);
+                        break;
+                    case "convert_drafting_to_model_pattern":
+                        result = ConvertDraftingToModelPattern();
+                        break;
+                    case "create_rc_filled_region":
+                        result = CreateRCFilledRegion(parameters);
+                        break;
+                    case "sync_ifc_structural_to_native":
+                        result = SyncIfcStructuralToNative(parameters);
+                        break;
+
+                    // === 帷幕立面 (PR #85, 作者 林孟毅 916kevin-gif) ===
+                    case "create_curtain_wall_elevations":
+                        result = CreateCurtainWallElevations(parameters);
+                        break;
+                    case "diagnose_curtain_wall_elevation_direction":
+                        result = DiagnoseCurtainWallElevationDirection(parameters);
+                        break;
+                    case "diagnose_curtain_wall_elevation_directions":
+                        result = DiagnoseCurtainWallElevationDirections(parameters);
                         break;
 
                     default:
@@ -2981,12 +3168,18 @@ namespace RevitMCP.Core
             }
             else // auto
             {
-                // 平面圖、天花板平面圖使用切割樣式
+                // 平面圖、天花板平面圖預設使用切割樣式（牆/柱/門窗等被剖切面切到的元素）
                 // 立面圖、剖面圖、3D 視圖使用表面樣式
-                useCutPattern = (view.ViewType == ViewType.FloorPlan || 
-                                 view.ViewType == ViewType.CeilingPlan ||
-                                 view.ViewType == ViewType.AreaPlan ||
-                                 view.ViewType == ViewType.EngineeringPlan);
+                bool isPlanView = view.ViewType == ViewType.FloorPlan ||
+                                  view.ViewType == ViewType.CeilingPlan ||
+                                  view.ViewType == ViewType.AreaPlan ||
+                                  view.ViewType == ViewType.EngineeringPlan;
+                // 例外：樓板/屋頂在平面圖位於剖切面之下、以「表面投影」顯示，不被剖切。
+                // 對它們套切割樣式會看不到顏色（樓板坡度檢討上色課題），故改用表面樣式。
+                IdType? catId = element.Category?.Id.GetIdValue();
+                bool isProjectedFloorLike = catId == (IdType)BuiltInCategory.OST_Floors ||
+                                            catId == (IdType)BuiltInCategory.OST_Roofs;
+                useCutPattern = isPlanView && !isProjectedFloorLike;
             }
 
             using (Transaction trans = new Transaction(doc, "Override Element Graphics"))

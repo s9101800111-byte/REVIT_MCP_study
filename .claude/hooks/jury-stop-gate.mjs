@@ -1,48 +1,66 @@
 #!/usr/bin/env node
-// jury-stop-gate.mjs
-// Stop hook: the "monitor" of the jury workflow. Blocks the agent from
-// finishing while code changes are unverified ("optimistic code" -> loop).
-//
-// Gate logic:
-//   1. No uncommitted changes to MCP-Server/src/**/*.ts or MCP/**/*.cs -> allow stop.
-//   2. Changed code must build (npm run build / dotnet build Release.R26),
-//      otherwise block with the build output as evidence.
-//   3. Build passing is not enough: the current diff must also hold a PASS
-//      verdict from the `code-reviewer` subagent, recorded in
-//      .claude/.jury-state.json. Missing/stale verdict -> block with
-//      instructions to run the juror.
-//   4. Safety valve: after MAX_BLOCKS consecutive blocks on the same diff the
-//      gate gives up and allows the stop (never hard-locks a session).
-//
-// Written in Node (not bash+jq): jq is not installed on this machine and
-// Node is already a hard dependency of MCP-Server.
+// jury-stop-gate.mjs  (generalized, config-driven)
+// Stop hook: blocks the agent from finishing while uncommitted code changes are
+// unverified ("optimistic code" -> loop). All project-specific behavior comes from
+// .claude/jury-gate.config.json, so the same script works in any repo.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const MAX_BLOCKS = 5;
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const CONFIG_PATH = join(ROOT, ".claude", "jury-gate.config.json");
 const STATE_PATH = join(ROOT, ".claude", ".jury-state.json");
+
+function allow() {
+  process.exit(0);
+}
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+const config = readJson(CONFIG_PATH);
+if (!config) allow(); // not installed here -> fail open
+
+const codeGlobs = Array.isArray(config.codeGlobs) ? config.codeGlobs : [];
+const verify = Array.isArray(config.verify) ? config.verify : [];
+const requireReview = config.requireReview !== false;
+const maxBlocks = Number.isInteger(config.maxBlocks) ? config.maxBlocks : 5;
 
 function git(args) {
   const r = spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
   return r.status === 0 ? r.stdout : null;
 }
-
 function tail(text, lines = 40, chars = 3000) {
   const t = (text || "").split(/\r?\n/).slice(-lines).join("\n");
   return t.length > chars ? t.slice(-chars) : t;
 }
-
-function readState() {
-  try {
-    return JSON.parse(readFileSync(STATE_PATH, "utf8"));
-  } catch {
-    return {};
+// glob -> RegExp: supports **, *, ? over '/'-separated paths (git uses '/').
+function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*") {
+      if (glob[i + 1] === "*") {
+        i++;
+        if (glob[i + 1] === "/") {
+          i++;
+          re += "(?:.*/)?";
+        } else re += ".*";
+      } else re += "[^/]*";
+    } else if (c === "?") re += "[^/]";
+    else if ("\\^$.|+()[]{}".includes(c)) re += "\\" + c;
+    else re += c;
   }
+  return new RegExp("^" + re + "$");
 }
+const matchers = codeGlobs.map(globToRegExp);
+const matches = (file) => matchers.length === 0 || matchers.some((m) => m.test(file));
 
 function block(state, reason) {
   state.blocks = (state.blocks || 0) + 1;
@@ -51,11 +69,7 @@ function block(state, reason) {
   process.exit(0);
 }
 
-function allow() {
-  process.exit(0);
-}
-
-// ---- 1. detect changed code files -----------------------------------------
+// 1. detect changed code files
 const status = git(["status", "--porcelain"]);
 if (status === null) allow(); // not a git repo / git error: fail open
 
@@ -66,16 +80,16 @@ for (const line of status.split(/\r?\n/)) {
   let file = line.slice(3);
   if (file.includes(" -> ")) file = file.split(" -> ").pop();
   file = file.replace(/^"|"$/g, "");
-  if (/^MCP-Server\/src\/.+\.ts$/.test(file) || /^MCP\/.+\.cs$/.test(file)) {
+  if (matches(file)) {
     changed.push(file);
     if (line.startsWith("??")) untracked.push(file);
   }
 }
 if (changed.length === 0) allow();
 
-// ---- 2. fingerprint the current diff ---------------------------------------
+// 2. fingerprint the current diff
 const hasher = createHash("sha1");
-hasher.update(git(["diff", "HEAD", "--", "MCP-Server/src", "MCP"]) || "");
+hasher.update(git(["diff", "HEAD", "--", ...changed.filter((f) => !untracked.includes(f))]) || "");
 for (const f of untracked.sort()) {
   try {
     hasher.update(f);
@@ -86,84 +100,65 @@ for (const f of untracked.sort()) {
 }
 const hash = hasher.digest("hex");
 
-let state = readState();
+let state = readJson(STATE_PATH) || {};
 if (state.hash !== hash) {
-  // diff changed since last check: all prior verdicts are void
-  state = { hash, build: "pending", review: "pending", blocks: 0 };
+  state = { hash, verify: "pending", review: "pending", blocks: 0 };
 }
+if (state.verify === "pass" && (!requireReview || state.review === "pass")) allow();
 
-// fully verified -> allow
-if (state.build === "pass" && state.review === "pass") allow();
-
-// safety valve: never hard-lock the session
-if ((state.blocks || 0) >= MAX_BLOCKS) {
+// safety valve
+if ((state.blocks || 0) >= maxBlocks) {
   process.stdout.write(
     JSON.stringify({
       systemMessage:
         "[jury gate] Gave up after " +
-        MAX_BLOCKS +
+        maxBlocks +
         " blocks on the same diff. Stop allowed, but the code changes remain UNVERIFIED.",
     })
   );
   process.exit(0);
 }
 
-// ---- 3. build verification --------------------------------------------------
-if (state.build !== "pass") {
-  const needTs = changed.some((f) => f.startsWith("MCP-Server/"));
-  const needCs = changed.some((f) => f.startsWith("MCP/"));
-
-  if (needTs) {
-    const r = spawnSync("npm", ["run", "build"], {
-      cwd: join(ROOT, "MCP-Server"),
+// 3. verify commands
+if (state.verify !== "pass") {
+  for (const step of verify) {
+    const cwd = join(ROOT, step.cwd || ".");
+    const r = spawnSync(step.command, {
+      cwd,
       encoding: "utf8",
       shell: true,
-      timeout: 240000,
+      timeout: (step.timeoutSec || 300) * 1000,
     });
     if (r.status !== 0) {
-      state.build = "fail";
+      state.verify = "fail";
       block(
         state,
-        "[JURY GATE] The TypeScript you changed does not build. Claiming completion now would be optimistic code. Evidence (npm run build in MCP-Server):\n\n" +
+        "[JURY GATE] Verification step '" +
+          (step.name || step.command) +
+          "' failed. Claiming completion now would be optimistic code.\n\nCommand: " +
+          step.command +
+          "  (cwd: " +
+          (step.cwd || ".") +
+          ")\n\nEvidence:\n" +
           tail((r.stdout || "") + "\n" + (r.stderr || "")) +
-          "\n\nFix the build, then finish again — the gate will re-verify."
+          "\n\nFix the problem, then finish again — the gate will re-verify."
       );
     }
   }
-
-  if (needCs) {
-    const r = spawnSync(
-      "dotnet",
-      ["build", "-c", "Release.R26", "RevitMCP.csproj", "--nologo", "-v", "m"],
-      { cwd: join(ROOT, "MCP"), encoding: "utf8", timeout: 480000 }
-    );
-    if (r.status !== 0) {
-      state.build = "fail";
-      block(
-        state,
-        "[JURY GATE] The C# you changed does not build. Claiming completion now would be optimistic code. Evidence (dotnet build -c Release.R26 MCP/RevitMCP.csproj):\n\n" +
-          tail((r.stdout || "") + "\n" + (r.stderr || "")) +
-          "\n\nFix the build, then finish again — the gate will re-verify."
-      );
-    }
-  }
-
-  state.build = "pass";
+  state.verify = "pass";
 }
 
-// ---- 4. independent review verdict ------------------------------------------
-if (state.review !== "pass") {
+// 4. independent review verdict
+if (requireReview && state.review !== "pass") {
   block(
     state,
-    "[JURY GATE] Build passed, but the current diff has NOT been reviewed by the independent code-reviewer juror.\n\n" +
-      "Changed files:\n- " +
+    "[JURY GATE] Verification passed, but the current diff has NOT been reviewed by the independent code-reviewer juror.\n\nChanged files:\n- " +
       changed.join("\n- ") +
-      "\n\nBefore you may finish:\n" +
-      '1. Launch the code-reviewer subagent (Agent tool, subagent_type: "code-reviewer") with prompt: ' +
-      '"Review the current uncommitted diff (git diff HEAD -- MCP-Server/src MCP, plus untracked .ts/.cs files). Return VERDICT: PASS or FAIL with findings."\n' +
-      "2. If VERDICT is FAIL: fix every BLOCKER finding first. (Fixes change the diff, so the gate will re-verify automatically.)\n" +
-      '3. Only if VERDICT is PASS: set "review": "pass" in .claude/.jury-state.json (change nothing else in that file), then finish again.\n\n' +
-      "NEVER set review=pass without an actual PASS verdict from the code-reviewer subagent obtained in this same turn. Faking the verdict violates CLAUDE.md > Tool Call Data Honesty."
+      '\n\nBefore you may finish:\n1. Launch the code-reviewer subagent (Agent tool, subagent_type: "code-reviewer") with prompt: ' +
+      '"Review the current uncommitted diff (git diff HEAD, plus untracked code files). Return VERDICT: PASS or FAIL with findings."\n' +
+      "2. If VERDICT is FAIL: fix every BLOCKER finding first. (Fixes change the diff, so the gate re-verifies automatically.)\n" +
+      '3. Only if VERDICT is PASS: set "review": "pass" in .claude/.jury-state.json (change nothing else), then finish again.\n\n' +
+      "NEVER set review=pass without an actual PASS verdict from the code-reviewer subagent obtained in this same turn."
   );
 }
 
