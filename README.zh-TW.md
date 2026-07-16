@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/logo.png" alt="Revit MCP" width="140" height="140">
+</div>
+
 # Revit MCP - AI-Powered Revit Control
 
 [English](README.md) | 繁體中文
@@ -7,6 +11,23 @@ Revit MCP 透過 Model Context Protocol (MCP) 讓 AI Client 呼叫 Revit 工具�
 - 示範影片：[Revit MCP - AI 驅動的 BIM 工作流程示範](https://youtu.be/YpAYF-GxrhA)
 - 知識站：<https://shuotao.github.io/REVIT_MCP_study/>
 - 預設 WebSocket port：`8964`
+
+## 這是什麼？
+
+用講人話的方式操作 Revit。跟你的 AI Client 說「幫這個視圖的牆全部標尺寸」或「檢查帷幕牆立面」，Revit 就會做——背後是 **166 個 MCP 工具**，由 **72 份專業 BIM SOP**（建築法規、數量計算、法規檢核）支撐。
+
+**給誰用：** 使用 Revit、想要 AI 輔助且符合規範的 BIM 工程師與建築師。你需要 Windows 上的 Revit（2022–2026），並願意安裝一個 add-in。
+
+## 三步開始
+
+1. **安裝 Revit add-in。** 編譯並部署 C# add-in——見[手動安裝](#手動安裝)。這是真正跟 Revit 對話的那半邊。
+2. **把 AI Client 指向 MCP Server。** 不用 clone，直接從 npm 跑：
+   ```json
+   { "mcpServers": { "revit-mcp": { "command": "npx", "args": ["-y", "@shuotao/revit-mcp-server"] } } }
+   ```
+3. **開啟 Revit、在 ribbon 啟用 MCP 服務，就能開始問。** 完整設定：[AI Client 設定](#ai-client-設定)。
+
+有問題、或想秀你做出什麼？→ **[Discussions](https://github.com/shuotao/REVIT_MCP_study/discussions)**
 
 ## 目前專案狀態
 
