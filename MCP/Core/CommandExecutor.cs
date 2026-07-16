@@ -381,6 +381,11 @@ namespace RevitMCP.Core
                         result = ListFamilySymbols(parameters);
                         break;
 
+                    // === 門窗型別批次建立模組 ===
+                    case "create_opening_types":
+                        result = CreateOpeningTypes(parameters);
+                        break;
+
                     // === 尺寸標註模組 ===
                     case "create_dimension_by_ray":
                         result = CreateDimensionByRay(parameters);

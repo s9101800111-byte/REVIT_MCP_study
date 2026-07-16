@@ -21,6 +21,7 @@ import { smokeExhaustTools } from "./smoke-exhaust-tools.js";
 import { STAIR_COMPLIANCE_TOOLS } from "./stair-compliance-tools.js";
 import { sheetTools } from "./sheet-tools.js";
 import { detailComponentTools } from "./detail-component-tools.js";
+import { openingTypeTools } from "./opening-type-tools.js";
 import { dimensionTools } from "./dimension-tools.js";
 import { dependentViewTools } from "./dependent-view-tools.js";
 import { dwgColumnTools } from "./dwg-column-tools.js";
@@ -37,8 +38,8 @@ import { structureTools } from "./structure-tools.js";
  * Profile 對照表：每個 profile 包含哪些模組
  */
 const PROFILE_MODULES: Record<string, Tool[][]> = {
-    full: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, mepTools, curtainWallTools, smokeExhaustTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, dimensionTools, dependentViewTools, dwgColumnTools, cadLinkTools, dwgBeamTools, clashTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, structureTools],
-    architect: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, curtainWallTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, dimensionTools, dependentViewTools, dwgColumnTools, cadLinkTools, dwgBeamTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools],
+    full: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, mepTools, curtainWallTools, smokeExhaustTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, openingTypeTools, dimensionTools, dependentViewTools, dwgColumnTools, cadLinkTools, dwgBeamTools, clashTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, structureTools],
+    architect: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, curtainWallTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, openingTypeTools, dimensionTools, dependentViewTools, dwgColumnTools, cadLinkTools, dwgBeamTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools],
     mep: [baseTools, mepTools, scheduleTools, visualizationTools, smokeExhaustTools, clashTools],
     structural: [baseTools, wallTools, visualizationTools, dwgColumnTools, dwgBeamTools, clashTools, structureTools],
     "fire-safety": [baseTools, roomTools, corridorAnalysisTools, visualizationTools, smokeExhaustTools],
