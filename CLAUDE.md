@@ -33,9 +33,9 @@ These counts must be derived from source, not copied by memory.
 
 | Item | Current Count | Source of Truth |
 |---|---:|---|
-| Runtime MCP tools | 147 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
-| Domain SOP files | 61 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
-| Claude skills | 42 | `.claude/skills/*/SKILL.md` |
+| Runtime MCP tools | 167 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
+| Domain SOP files | 72 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
+| Claude skills | 50 | `.claude/skills/*/SKILL.md` |
 
 When these numbers change, update `CLAUDE.md`, `README.md`, `README.zh-TW.md`, `docs/DOCUMENT_AUDIENCE_INVENTORY.md`, and any public site copy that makes grand-total claims. Then run `scripts/verify-qaqc.ps1 -SkipBuild -SkipDeploy`.
 
@@ -171,15 +171,6 @@ Before output:
 
 If tools are unavailable, say so and switch to generic guidance.
 
-### Jury Review Gate
-
-A Stop hook (`.claude/hooks/jury-stop-gate.mjs`) blocks finishing a session while uncommitted changes to `MCP-Server/src/**/*.ts` or `MCP/**/*.cs` are unverified:
-
-1. Changed code must build (`npm run build` for TS, `dotnet build -c Release.R26` for C#). A failing build blocks the stop with the error output.
-2. The current diff must then hold a PASS verdict from the `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) — an independent, read-only juror that reviews the diff on evidence only.
-3. Verification state lives in `.claude/.jury-state.json` (gitignored). Set `"review": "pass"` only after a real PASS verdict from the subagent in the same turn; never edit it to silence the gate.
-4. Any further code change voids prior verdicts (the gate fingerprints the diff). After 5 consecutive blocks on the same diff the gate gives up and allows the stop, so it cannot hard-lock a session.
-
 ### Domain Method Compliance
 
 When a task involves code compliance, regulation checks, engineering analysis, BIM quantity calculations, or a workflow covered by `domain/*.md`, the domain file defines the method.
@@ -287,6 +278,17 @@ Read the matching file before applying a workflow or calculation.
 | view link cleanup, 清理視圖, 隱藏連結, 關閉連結基準, link visibility | `domain/view-link-cleanup-workflow.md` |
 | local update, 本機更新, pull 後部署, 重新編譯部署, 環境專屬部署 | `domain/local-update-workflow.md` |
 | wall orientation, wall check | `domain/wall-check.md` |
+| finish schedule, 粉刷明細, material code governance, 材料代碼 | `domain/finish-schedule-governance.md` |
+| beam top alignment, 樑頂貼齊, slab soffit, 樓板底 | `domain/beam-slab-alignment.md` |
+| IFC structural native, IFC 原生結構, beam column sync, 梁柱同步 | `domain/ifc-structural-native-sync.md` |
+| quantity takeoff excel, 數量計算, excel export, 數量表 | `domain/quantity-takeoff-excel.md` |
+| matchline, 接圖線, 定位線 automation | `domain/matchline-automation.md` |
+| viewport type scale, 視埠類型比例, viewport sync | `domain/viewport-type-scale-sync.md` |
+| scaffold takeoff, 施工架, 施工架算量, scaffold perimeter, calculate_room_scaffold_perimeters, calculate_exterior_wall_scaffold_perimeter | `domain/scaffold-takeoff.md` |
+| tall partition, 高牆, 高隔間, 到頂隔間, tall partition index, analyze_tall_partition_rooms | `domain/tall-partition-index-workflow.md` |
+| threshold opening, 門檻開口, 門窗統計, door count, window count, get_room_door_counts, get_room_window_counts | `domain/threshold-opening-takeoff.md` |
+| RC filled region, RC 填充區域, 批次填充, batch fill region, batch_create_rc_filled_region, create_rc_filled_region | `domain/rc-filled-region-workflow.md` |
+| curtain wall elevation, 帷幕立面, 帷幕外立面, curtain elevation, create_curtain_wall_elevations | `domain/curtain-wall-elevation-workflow.md` |
 
 Meta and governance domain files:
 
@@ -305,7 +307,7 @@ Meta and governance domain files:
 
 ## Skills
 
-The canonical skill catalog is the .claude/skills/ directory itself (42 skills; count table above is the gate).
+The canonical skill catalog is the .claude/skills/ directory itself (50 skills; count table above is the gate).
 
 Use the smallest relevant skill set. If a skill and a domain file conflict on the method, the domain file wins.
 

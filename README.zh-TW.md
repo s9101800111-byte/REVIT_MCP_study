@@ -12,9 +12,9 @@ Revit MCP 透過 Model Context Protocol (MCP) 讓 AI Client 呼叫 Revit 工具�
 
 | 項目 | 數量 | 來源 |
 |---|---:|---|
-| Runtime MCP tools | 147 | `MCP-Server/src/tools/index.ts` 的 `registerRevitTools()` |
-| Domain SOP files | 61 | `domain/*.md` 扣除 `README.md`，加上 `domain/references/*.md` |
-| Claude skills | 42 | `.claude/skills/*/SKILL.md` |
+| Runtime MCP tools | 167 | `MCP-Server/src/tools/index.ts` 的 `registerRevitTools()` |
+| Domain SOP files | 72 | `domain/*.md` 扣除 `README.md`，加上 `domain/references/*.md` |
+| Claude skills | 50 | `.claude/skills/*/SKILL.md` |
 
 如果這些數字改變，請同步更新 `CLAUDE.md`、本 README、`README.md`、`docs/DOCUMENT_AUDIENCE_INVENTORY.md`，並執行：
 
@@ -72,6 +72,16 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -NonInteractive -Revi
 ```
 
 腳本會檢查環境、安裝相依套件、編譯 MCP Server、編譯並部署 Revit Add-in，並協助設定常見 AI Client。
+
+## 從 MCP Registry 安裝
+
+MCP Server 已發佈到 [MCP Registry](https://registry.modelcontextprotocol.io/)，名稱為 `io.github.shuotao/revit-mcp-server`（npm 套件 `@shuotao/revit-mcp-server`）。可直接執行：
+
+```bash
+npx -y @shuotao/revit-mcp-server
+```
+
+注意：此 npm 套件只是 Node stdio 橋接。C# Revit Add-in（`MCP/`）仍須單獨安裝——請依下方**手動安裝**針對你的 Revit 版本編譯與部署。
 
 ## 手動安裝
 

@@ -12,9 +12,9 @@ Revit MCP lets AI clients call Autodesk Revit tools through the Model Context Pr
 
 | Item | Count | Source |
 |---|---:|---|
-| Runtime MCP tools | 147 | `registerRevitTools()` in `MCP-Server/src/tools/index.ts` |
-| Domain SOP files | 61 | `domain/*.md` except `README.md`, plus `domain/references/*.md` |
-| Claude skills | 42 | `.claude/skills/*/SKILL.md` |
+| Runtime MCP tools | 167 | `registerRevitTools()` in `MCP-Server/src/tools/index.ts` |
+| Domain SOP files | 72 | `domain/*.md` except `README.md`, plus `domain/references/*.md` |
+| Claude skills | 50 | `.claude/skills/*/SKILL.md` |
 
 When these numbers change, update `CLAUDE.md`, `README.zh-TW.md`, this file, `docs/DOCUMENT_AUDIENCE_INVENTORY.md`, and run:
 
@@ -72,6 +72,16 @@ powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -NonInteractive -Revi
 ```
 
 The setup script checks prerequisites, installs dependencies, builds the MCP server, builds and deploys the Revit add-in, and helps configure common AI clients.
+
+## Install from MCP Registry
+
+The MCP server is published on the [MCP Registry](https://registry.modelcontextprotocol.io/) as `io.github.shuotao/revit-mcp-server` (npm package `@shuotao/revit-mcp-server`). Run it directly with:
+
+```bash
+npx -y @shuotao/revit-mcp-server
+```
+
+Note: this npm package is only the Node stdio bridge. The C# Revit add-in (`MCP/`) must still be installed separately — follow **Manual Setup** below for your Revit version.
 
 ## Manual Setup
 
