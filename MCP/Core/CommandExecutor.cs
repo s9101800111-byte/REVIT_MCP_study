@@ -479,6 +479,11 @@ namespace RevitMCP.Core
                         result = ListFamilySymbols(parameters);
                         break;
 
+                    // === 門窗型別批次建立模組 ===
+                    case "create_opening_types":
+                        result = CreateOpeningTypes(parameters);
+                        break;
+
                     // === 詳圖項目複製 / 去重（劉可 PR#30 bundle②）===
                     case "copy_detail_items_to_views":
                         result = CopyDetailItemsToViews(parameters);

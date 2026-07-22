@@ -21,6 +21,7 @@ import { smokeExhaustTools } from "./smoke-exhaust-tools.js";
 import { STAIR_COMPLIANCE_TOOLS } from "./stair-compliance-tools.js";
 import { sheetTools } from "./sheet-tools.js";
 import { detailComponentTools } from "./detail-component-tools.js";
+import { openingTypeTools } from "./opening-type-tools.js";
 import { dimensionTools } from "./dimension-tools.js";
 import { dependentViewTools } from "./dependent-view-tools.js";
 import { dwgColumnTools } from "./dwg-column-tools.js";
@@ -54,8 +55,8 @@ import { tagsTools } from "./tags-tools.js";
  * Profile 對照表：每個 profile 包含哪些模組
  */
 const PROFILE_MODULES: Record<string, Tool[][]> = {
-    full: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, mepTools, curtainWallTools, smokeExhaustTools, smokeDetectorTools, parallelSectionTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, dimensionTools, dependentViewTools, dwgColumnTools, dwgBeamTools, cadLinkTools, clashTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, structureTools, gradingTools, detailCopyTools, scopeBoxTools, viewCropBoxTools, textNoteTools, titleblockAlignTools, viewCreationTools, viewportPositionTools, crossDocumentTools, legendTools, scaffoldTools, viewDuplicateTools, fillRegionTools, ifcStructuralSyncTools, tagsTools],
-    architect: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, curtainWallTools, parallelSectionTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, dimensionTools, dependentViewTools, dwgColumnTools, dwgBeamTools, cadLinkTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, gradingTools, detailCopyTools, scopeBoxTools, viewCropBoxTools, textNoteTools, titleblockAlignTools, viewCreationTools, viewportPositionTools, crossDocumentTools, legendTools, scaffoldTools, viewDuplicateTools, fillRegionTools, tagsTools],
+    full: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, mepTools, curtainWallTools, smokeExhaustTools, smokeDetectorTools, parallelSectionTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, openingTypeTools, dimensionTools, dependentViewTools, dwgColumnTools, dwgBeamTools, cadLinkTools, clashTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, structureTools, gradingTools, detailCopyTools, scopeBoxTools, viewCropBoxTools, textNoteTools, titleblockAlignTools, viewCreationTools, viewportPositionTools, crossDocumentTools, legendTools, scaffoldTools, viewDuplicateTools, fillRegionTools, ifcStructuralSyncTools, tagsTools],
+    architect: [baseTools, wallTools, roomTools, corridorAnalysisTools, visualizationTools, scheduleTools, curtainWallTools, parallelSectionTools, STAIR_COMPLIANCE_TOOLS, sheetTools, detailComponentTools, openingTypeTools, dimensionTools, dependentViewTools, dwgColumnTools, dwgBeamTools, cadLinkTools, doorWindowLegendTools, listSeedsTools, dimensionTypeTools, legendViewTools, gradingTools, detailCopyTools, scopeBoxTools, viewCropBoxTools, textNoteTools, titleblockAlignTools, viewCreationTools, viewportPositionTools, crossDocumentTools, legendTools, scaffoldTools, viewDuplicateTools, fillRegionTools, tagsTools],
     mep: [baseTools, mepTools, scheduleTools, visualizationTools, smokeExhaustTools, smokeDetectorTools, parallelSectionTools, clashTools],
     structural: [baseTools, wallTools, visualizationTools, dwgColumnTools, dwgBeamTools, clashTools, structureTools, gradingTools, ifcStructuralSyncTools, tagsTools],
     "fire-safety": [baseTools, roomTools, corridorAnalysisTools, visualizationTools, smokeExhaustTools, smokeDetectorTools],
