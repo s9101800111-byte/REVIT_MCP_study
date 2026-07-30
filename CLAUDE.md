@@ -33,8 +33,8 @@ These counts must be derived from source, not copied by memory.
 
 | Item | Current Count | Source of Truth |
 |---|---:|---|
-| Runtime MCP tools | 168 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
-| Domain SOP files | 72 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
+| Runtime MCP tools | 170 | `registerRevitTools()` from `MCP-Server/src/tools/index.ts` |
+| Domain SOP files | 74 | `domain/*.md` except `domain/README.md`, plus `domain/references/*.md` |
 | Claude skills | 50 | `.claude/skills/*/SKILL.md` |
 
 When these numbers change, update `CLAUDE.md`, `README.md`, `README.zh-TW.md`, `docs/DOCUMENT_AUDIENCE_INVENTORY.md`, and any public site copy that makes grand-total claims. Then run `scripts/verify-qaqc.ps1 -SkipBuild -SkipDeploy`.
@@ -295,6 +295,8 @@ Read the matching file before applying a workflow or calculation.
 | threshold opening, 門檻開口, 門窗統計, door count, window count, get_room_door_counts, get_room_window_counts | `domain/threshold-opening-takeoff.md` |
 | RC filled region, RC 填充區域, 批次填充, batch fill region, batch_create_rc_filled_region, create_rc_filled_region | `domain/rc-filled-region-workflow.md` |
 | curtain wall elevation, 帷幕立面, 帷幕外立面, curtain elevation, create_curtain_wall_elevations | `domain/curtain-wall-elevation-workflow.md` |
+| opening candidate, 開孔候選, opening scan, 開孔預掃, scan_opening_candidates, 套管前置檢核, clearanceMm | `domain/mep-opening-candidate-scan.md` |
+| cad 圖塊放置, block 轉族群, 灑水頭建模, 閥件建模, point placement from CAD block, INSERT to FamilyInstance | `domain/cad-block-point-placement.md` |
 
 Meta and governance domain files:
 
@@ -371,6 +373,26 @@ QA/QC must cover:
 - markdown count-table claims (`| Runtime MCP tools | N |` style) in CLAUDE.md, README, README.zh-TW, and the audience inventory
 - client config template portability (no hardcoded user paths; `<YOUR_PROJECT_PATH>` placeholder required)
 - snapshot banner (`data-snapshot="YYYY-MM-DD"`) on date-prefixed `docs/MMDD-*.html`
+- MCP Registry publish consistency (`server.json` ↔ `MCP-Server/package.json` ↔ schema; 3-place version parity) — Phase 7 check `7-11`, see below
+
+## MCP Registry Publish Consistency
+
+The MCP Registry publish artifacts must stay mutually consistent. This is owned by two **mandated Sonnet subagents** plus a deterministic gate — never hand-maintained ad hoc.
+
+**Main files** (any change to these triggers the loop): `server.json`, `MCP-Server/package.json`, `scripts/schemas/server.schema.json`, `.github/workflows/publish-mcp.yml`, `docs/MCP_REGISTRY_PUBLISH.md`.
+
+**The loop** — whenever a main file changes (a PostToolUse hook, `.claude/hooks/detect-registry-trigger.sh`, reminds you):
+
+1. **`mcp-registry-sync`** (`.claude/agents/mcp-registry-sync.md`, **model: sonnet**) — the fix agent. Aligns `server.json` `.version` / `.packages[].version` / `.packages[].identifier` / `.name` / repo URL, plus the README "Install from MCP Registry" section and the playbook's `Current version`, to the authoritative source (`MCP-Server/package.json` / the `v*` tag).
+2. **`mcp-registry-ops-inspect`** (`.claude/agents/mcp-registry-ops-inspect.md`, **model: sonnet**) — the read-only ops audit. Confirms no drift and reports the verdict.
+3. **Hard gate** — `python scripts/validate_publish_consistency.py` must exit `0` (also wired into `verify-qaqc.ps1` Phase 7 check `7-11`).
+
+**Rules:**
+
+- Both agents **must run as Sonnet** (pinned in their frontmatter — do not override).
+- **Never regress a version.** Only align upward to the authoritative/highest valid semver.
+- **Never `npm publish` / `mcp-publisher publish` manually.** Release only by pushing a `v*` tag → `.github/workflows/publish-mcp.yml` rewrites the 3 version places and publishes.
+- **Report in Traditional Chinese (繁體中文)** every time this area is touched: which files/fields changed, from what → to what, and the validator's exit code.
 
 ## Logging Protocol
 
