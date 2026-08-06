@@ -257,6 +257,10 @@ namespace RevitMCP.Core
                         result = JoinWallTops(parameters);
                         break;
 
+                    case "create_wall_sweeps":
+                        result = CreateWallSweeps(parameters);
+                        break;
+
                     // === 解除幾何接合（劉可 PR#30 bundle②）===
                     case "unjoin_column_joins":
                         result = UnjoinColumnJoins(parameters);
