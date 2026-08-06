@@ -73,12 +73,11 @@ namespace RevitMCP
                 // 避免 HTTP.sys 孤兒 Request Queue 佔住 port。
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => EmergencyStopSocket();
 
-                Logger.Info("RevitMCP Plugin 已成功載入");
+                // 不在 OnStartup 顯示 modal 對話框：此時 Revit 主視窗尚未建立，
+                // TaskDialog 常被壓在啟動畫面後面，使用者只看到 splash 不動，
+                // 實際上 Revit 正停下來等人按確定。載入結果寫 log 即可。
+                Logger.Info("RevitMCP Plugin 已成功載入（點 Ribbon 的「MCP 服務 (開/關)」啟用 AI 控制）");
 
-                TaskDialog.Show("RevitMCP", 
-                    "RevitMCP Plugin 已載入\n\n" +
-                    "請點擊「MCP 服務 (開/關)」按鈕來啟用 AI 控制功能");
-                
                 return Result.Succeeded;
             }
             catch (Exception ex)
