@@ -96,7 +96,7 @@ Document.EditFamily(family)          // 開啟家族文件，不可在 Transacti
 >
 > 驗證方式是 `get_element_info` 逐欄讀回比對，不是採信工具回傳的 `Success: true`。
 >
-> **結論**：`GreenMaterial_Certified` 不再是 best-effort 欄位——它與其他 `GreenMaterial_*` 欄位是同等的正常必填欄位，缺漏即代表該次執行未通過（下方〈驗證協議〉已同步更新）。**此次修正的實測只涵蓋 Window 案例，Door 案例尚未驗證**（見〈驗證協議〉開頭的覆蓋缺口說明）。
+> **結論**：`GreenMaterial_Certified` 不再是 best-effort 欄位——它與其他 `GreenMaterial_*` 欄位是同等的正常必填欄位，缺漏即代表該次執行未通過（下方〈驗證協議〉已同步更新）。此次修正的實測**已涵蓋 Window 與 Door 兩個案例**（見〈驗證協議〉開頭的覆蓋紀錄）。
 
 > **實作前必讀的編碼地雷**：`GreenMaterial_SharedParams.txt` 是 **cp950 (Big5) ANSI 編碼**，不是 UTF-8（檔案開頭註解已明講）。用一般 UTF-8 文字工具（含大多數程式碼編輯器的預設存檔）直接編輯或新增 PARAM 列，會把既有中文 GROUP/PARAM 說明重新存成亂碼，Revit 重新解析時會整批壞掉。新增 `GreenMaterial_Window_ShadingCoefficient`／`GreenMaterial_AcousticRw` 這兩個 PARAM 列時，必須用能指定 cp950 編碼寫檔的方式操作（例如 Python `open(path, "a", encoding="cp950")`），且新增前後都要驗證既有列的中文沒有變亂碼。GUID 沿用檔案既有的遞增慣例（目前最大到 `...111111111167`，新參數接續 `...168`/`...169`），並建議獨立一個 `GROUP 5「門窗專屬效能 (Window/Door Performance)」`，不要塞進既有 GROUP 1~4。
 
@@ -137,7 +137,19 @@ Document.EditFamily(family)          // 開啟家族文件，不可在 Transacti
 
 ## 驗證協議（對應驗收條件「至少一個 Window 與一個 Door 案例」）
 
-> **覆蓋缺口（2026-08-31）**：本次根因修正的實測只做了 Window 案例（基底 `Window-Fixed-Transom` 的 `50" x 80"`），**Door 案例尚未驗證**。下方「至少一個 Window 與一個 Door 案例」的要求目前只滿足一半，在 Door 案例補驗前，不應把 Scenario 7 當作已全面驗證通過。
+> **覆蓋紀錄（2026-08-31）**：下方「至少一個 Window 與一個 Door 案例」的要求**兩案例皆已實測通過**，均在 Revit 2024 / Autodesk 範例模型 Snowdon Towers 上執行（未存檔）：
+>
+> | | Window 案例 | Door 案例 |
+> |---|---|---|
+> | 基底 Family + Type | `Window-Fixed-Transom` `50" x 80"` | `Door-Passage-Single-Flush` `36" x 84"` |
+> | 寫入 / 讀回 | **12 / 12** | **14 / 14**（含 Identity Data 3 欄） |
+> | `MissingParameters` | 空陣列 | 空陣列 |
+> | `GreenMaterial_Certified` | `Yes` | `Yes` |
+> | `GreenMaterial_AcousticRw` | `35` | `32` |
+> | `GreenMaterial_Window_ShadingCoefficient` | `0.42` | **不存在（Door 不適用，正確留空）** |
+> | 規則 4 `AffectedExistingTypes` | 0（原家族 6 Type 未動） | 0（原家族 20 Type 未動，新家族 21 = 20 複本 + 1 新增） |
+>
+> 兩案例的驗證方式均為 `get_element_info` 逐欄讀回比對，不採信工具回傳的 `Success: true`。Door 案例特別確認了「`ShadingCoefficient` 對 Door 不適用應留空」這條**否定條件**——它不在 dryRun 的 `PlannedWrittenFields` 中，也不在實際寫入後的讀回結果中。
 
 兩個類別都要各跑一次完整流程並各自產出以下紀錄，不可只驗 Window 就當 Door 也通過（門窗的 Identity Data 欄位集合、隔音/遮陽適用性不同，見規則3表格）：
 
