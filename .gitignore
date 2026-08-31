@@ -144,6 +144,9 @@ __pycache__/
 # TABC 綠建材資料為第三方（財團法人臺灣建築中心）著作，不隨本 MIT 授權 repo 再散布。
 # 本機執行 GM_update_tabc_database.py（或 /GM_update）可重新產生，見 tools/green-material/README.md。
 /tabc_master_database.json
+# 抓取時間戳旁生檔（GM_update 寫、GM_import 讀，見 issue #128）。跟著主資料庫一起留在本機：
+# 它描述的是「這台機器的資料庫多舊」，對別台機器沒有意義，且會與該機器的實際狀態衝突。
+/tabc_master_database.meta.json
 /assets/green-material-showcase.html
 
 # /GM_import 與 /GM_set compare 每次執行都會整份覆寫的單一最新注入計畫快照，

@@ -14,7 +14,9 @@
 | 注入入口 | `tools/green-material/GM_apply_revit_injection_plan.py` | Injection Plan 執行入口 |
 | 本機 Showcase 服務 | `local_server.py` | 提供展示頁與 Set JSON 同步 API |
 | 共享參數驗證 | `tools/green-material/GM_validate_shared_params.py` | 驗證 `GreenMaterial_SharedParams.txt` |
+| 新鮮度／效期驗收測試 | `tools/green-material/GM_test_freshness_gate.py` | issue #128 三層（時間戳讀回／30 天門檻／過期標章硬擋）的 RED/GREEN 測試。不連網、不碰本機資料庫，全在 tempfile 合成 fixture 上跑，證號用 `GBM000000x` 佔位符。`python tools/green-material/GM_test_freshness_gate.py`，exit 0 為全過 |
 | TABC 主資料 | `tabc_master_database.json` | 綠建材標章主資料庫（本機專屬，不入庫） |
+| 抓取時間戳 | `tabc_master_database.meta.json` | 主資料庫上次真實抓取的時間與筆數（本機專屬，不入庫）。由 `GM_update_tabc_database.py` 的真實執行寫入（`--dry-run`／`--resync-html` 皆不寫），`GM_generate_revit_injection_plan.py` 的 `database_freshness()` 讀回，供 `/GM_import` 在擬訂計畫前告知使用者資料多舊；缺席時退回主資料庫檔案 mtime 的推估值 |
 | Set 工作資料 | `exported_material_sets.json` | Showcase、Agent 與 Revit 匯入流程共享狀態（本機專屬，不入庫） |
 | 產出計畫 | `Revit_Injection_Plan.json` | 最近一次產生的注入計畫（本機專屬，不入庫） |
 | 共享參數 | `tools/green-material/GreenMaterial_SharedParams.txt` | Revit v4 多材料槽位 Schema |

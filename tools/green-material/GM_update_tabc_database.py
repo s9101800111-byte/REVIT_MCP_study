@@ -51,6 +51,11 @@ import urllib.request
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.dirname(os.path.dirname(SCRIPT_DIR))  # repo root (this file lives in tools/green-material/)
 DB_PATH = os.path.join(WORKSPACE, "tabc_master_database.json")
+# 抓取時間戳的旁生檔（sidecar）。主資料庫本身是一個純 JSON 陣列（`[{...}, ...]`），沒有可以
+# 放中繼資料的外層物件；把它改成帶 header 的物件會同時打斷 load_database()、_build_showcase_html()
+# 與展示頁的 `const tabcDatabase = [...]` 拼接，所以時間戳改寫在旁生檔。檔名刻意含
+# "tabc_master_database"，讓 QA/QC 閘門 3-5 的路徑樣式（子字串比對）自動涵蓋它，不必動閘門。
+DB_META_PATH = os.path.join(WORKSPACE, "tabc_master_database.meta.json")
 SHOWCASE_PATH = os.path.join(WORKSPACE, "assets", "green-material-showcase.html")
 TEMPLATE_PATH = os.path.join(WORKSPACE, "assets", "green-material-showcase.template.html")
 
@@ -329,8 +334,30 @@ def update_tabc_database(dry_run: bool = False, progress=print) -> dict:
         json.dump(merged, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, DB_PATH)
 
+    diff["metaWritten"] = _write_db_meta(diff["timestamp"], len(merged), diff["bootstrap"])
     diff["showcaseSynced"] = _sync_showcase_html(merged)
     return diff
+
+
+def _write_db_meta(fetched_at: str, record_count: int, bootstrap: bool) -> bool:
+    """把本次「真的連線抓取並寫入主資料庫」的時間戳持久化到旁生檔，供 /GM_import 讀回計算資料年齡。
+    只有真實寫入路徑會呼叫：--dry-run 不寫（沒有改動資料庫），--resync-html 也不寫（沒有連線抓取，
+    資料年齡沒有變新）。寫入失敗時回傳 False 而不拋例外——時間戳是輔助資訊，不該讓一次成功的
+    資料庫更新因為旁生檔寫不出來而失敗；讀取端（database_freshness）本來就有檔案 mtime 的退路。"""
+    meta = {
+        "fetchedAt": fetched_at,
+        "recordCount": record_count,
+        "bootstrap": bootstrap,
+        "source": "GM_update_tabc_database.py",
+    }
+    tmp_path = DB_META_PATH + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, DB_META_PATH)
+        return True
+    except OSError:
+        return False
 
 
 def resync_html_only(progress=print) -> dict:

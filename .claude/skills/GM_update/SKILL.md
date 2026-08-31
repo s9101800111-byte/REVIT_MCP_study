@@ -48,7 +48,7 @@ This does no network I/O: it reads the existing local `tabc_master_database.json
    ```markdown
    ## [YYYY-MM-DD HH:MM] data-update | TABC 綠建材主資料庫更新
    - actor: claude-sonnet-5 (via Claude Code)
-   - files: tabc_master_database.json, assets/green-material-showcase.html
+   - files: tabc_master_database.json, tabc_master_database.meta.json, assets/green-material-showcase.html
    - trigger: manual
    - summary: +N 新增／M 更新／K 本次未再出現，共 totalAfter 筆
    ```
@@ -66,12 +66,14 @@ This does no network I/O: it reads the existing local `tabc_master_database.json
 |-------|----------|
 | `RuntimeError` — zero items fetched | Site unreachable or HTML structure changed. Stop, report to user, do not modify any file. |
 | `tabc_master_database.json` missing | No longer an error — treated as an empty database, the run becomes a full import (`diff["bootstrap"] = true`). Report this to the user as a first-time setup, not a routine update. |
+| `metaWritten: false` in the real-run result | The fetch timestamp sidecar (`tabc_master_database.meta.json`) could not be written — the database itself updated fine. Mention it: until it is writable, `/GM_import` falls back to estimating the data's age from the database file's mtime instead of the recorded fetch time. |
 | `showcaseSynced: false` in the real-run result | `assets/green-material-showcase.template.html`'s `const tabcDatabase = [...]` markers weren't found (template missing or corrupted) — the JSON file was still updated correctly; tell the user the template needs a manual look. |
 | Dry run shows a very large `notSeen` count (e.g. hundreds) | Likely a partial crawl (network hiccup mid-run cut off several categories), not a real mass delisting. Warn the user and suggest re-running the dry run before proceeding to the real update. |
 
 ## Relationship to Other Files
 
 - `GM_update_tabc_database.py` (`tools/green-material/`) — the fetch/merge/sync engine this skill drives; also the canonical reference for exactly which fields are real vs. template-derived.
+- `tabc_master_database.meta.json` (repo root, local-only) — the fetch-timestamp sidecar written by this skill's real run only (not `--dry-run`, not `--resync-html`, since neither makes the local data any newer). `/GM_import` reads it back to tell the user how old their data is (issue #128). The master database is a bare JSON array with nowhere to put a header, which is why the timestamp lives beside it rather than inside it.
 - `tabc_master_database.json` (repo root, local-only) — the file this skill refreshes; consumed by `GM_generate_revit_injection_plan.py` (`/GM_import`, `/GM_set compare`) and `assets/green-material-showcase.html`.
 - `assets/green-material-showcase.template.html` (repo root, **git-tracked**) — the UI/JS/CSS source of truth for the showcase page. Edit this file for any UI/feature change, never `assets/green-material-showcase.html` directly (it's a generated, local-only file that this skill overwrites on every run).
 - `tools/green-material/README.md` — governance notes on why the old `archive/scripts/catalog/*.py` scrapers (excluded from this repo entirely — see its "`archive/` 目錄未隨本 repo 收編" section) are historical, not live dependencies, and on the template/generated-file split.
