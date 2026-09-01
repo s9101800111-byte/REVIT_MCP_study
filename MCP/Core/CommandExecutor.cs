@@ -125,7 +125,52 @@ namespace RevitMCP.Core
                     case "modify_element_parameter":
                         result = ModifyElementParameter(parameters);
                         break;
-                    
+
+                    case "load_shared_parameters":
+                        result = LoadSharedParameters(parameters);
+                        break;
+
+                    case "create_green_material":
+                        result = CreateGreenMaterial(parameters);
+                        break;
+
+                    case "get_all_materials":
+                        result = GetAllMaterials(parameters);
+                        break;
+                    case "create_material":
+                        result = CreateCustomMaterial(parameters);
+                        break;
+                    case "create_material_by_domain":
+                        result = CreateMaterialByDomain(parameters);
+                        break;
+                    case "duplicate_element_type":
+                        result = DuplicateElementType(parameters);
+                        break;
+
+                    case "set_green_material_type_parameters":
+                        result = SetGreenMaterialTypeParameters(parameters);
+                        break;
+
+                    case "create_single_material_type":
+                        result = CreateSingleMaterialType(parameters);
+                        break;
+
+                    case "create_multi_layer_type":
+                        result = CreateMultiLayerType(parameters);
+                        break;
+
+                    case "duplicate_type_only":
+                        result = DuplicateTypeOnly(parameters);
+                        break;
+
+                    case "set_material_surface_pattern":
+                        result = SetMaterialSurfacePattern(parameters);
+                        break;
+
+                    case "inject_green_material_into_family":
+                        result = InjectGreenMaterialIntoFamily(parameters);
+                        break;
+
                     case "create_door":
                         result = CreateDoor(parameters);
                         break;
@@ -169,13 +214,21 @@ namespace RevitMCP.Core
                     case "place_furniture":
                         result = PlaceFurniture(parameters);
                         break;
-                    
+
+                    case "place_family_instances":
+                        result = PlaceFamilyInstances(parameters);
+                        break;
+
                     case "get_room_info":
                         result = GetRoomInfo(parameters);
                         break;
                     
                     case "get_rooms_by_level":
                         result = GetRoomsByLevel(parameters);
+                        break;
+
+                    case "renumber_rooms_by_level":
+                        result = RenumberRoomsByLevel(parameters);
                         break;
 
                     case "get_room_surface_areas":
@@ -601,6 +654,17 @@ namespace RevitMCP.Core
                         result = DwgColumnExecutor.CreateColumnsFromDwg(_uiApp.ActiveUIDocument.Document, parameters);
                         break;
 
+                    // === CAD 圖塊點位放置模組（Block/INSERT → FamilyInstance，issue #100/#113）===
+                    case "get_dwg_block_instances":
+                        result = CadBlockPlacementExecutor.GetDwgBlockInstances(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+                    case "preview_family_instances_from_dwg_blocks":
+                        result = CadBlockPlacementExecutor.PreviewFamilyInstancesFromDwgBlocks(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+                    case "create_family_instances_from_dwg_blocks":
+                        result = CadBlockPlacementExecutor.CreateFamilyInstancesFromDwgBlocks(_uiApp.ActiveUIDocument.Document, parameters);
+                        break;
+
                     // === CAD 連結模組 ===
                     case "link_cad_to_view":
                         result = CadLinkExecutor.LinkCadToView(_uiApp.ActiveUIDocument.Document, parameters);
@@ -633,6 +697,9 @@ namespace RevitMCP.Core
                         break;
                     case "detect_clashes":
                         result = DetectClashes(parameters);
+                        break;
+                    case "scan_opening_candidates":
+                        result = ScanOpeningCandidates(parameters);
                         break;
                     case "colorize_clashes":
                         result = ColorizeClashes(parameters);
@@ -699,6 +766,9 @@ namespace RevitMCP.Core
                     case "get_room_window_counts":
                         result = GetRoomWindowCounts(parameters);
                         break;
+                    case "get_space_centroid":
+                        result = GetSpaceCentroid(parameters);
+                        break;
                     case "auto_convert_rotated_viewport_patterns":
                         result = AutoConvertRotatedViewportPatterns();
                         break;
@@ -727,6 +797,11 @@ namespace RevitMCP.Core
                         break;
                     case "diagnose_curtain_wall_elevation_directions":
                         result = DiagnoseCurtainWallElevationDirections(parameters);
+                        break;
+
+                    // === MEP 風管系統 (Stage 1) ===
+                    case "create_duct_system":
+                        result = CreateDuctSystem(parameters);
                         break;
 
                     default:
@@ -4393,6 +4468,12 @@ namespace RevitMCP.Core
         {
             var linkHelper = new LinkedModelHelper(_uiApp);
             return new ClashDetector(_uiApp, linkHelper).DetectClashes(parameters);
+        }
+
+        private object ScanOpeningCandidates(JObject parameters)
+        {
+            var linkHelper = new LinkedModelHelper(_uiApp);
+            return new OpeningCandidateScanner(_uiApp, linkHelper).Scan(parameters);
         }
 
         private object ColorizeClashes(JObject parameters)
