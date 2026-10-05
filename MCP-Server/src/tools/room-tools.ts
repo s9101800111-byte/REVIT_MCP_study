@@ -348,7 +348,7 @@ export const roomTools: Tool[] = [
     },
     {
         name: "get_room_daylight_info",
-        description: "取得房間的採光資訊，包含居室面積、外牆開口面積、採光比例。用於建築技術規則居室採光檢討。",
+        description: "取得房間的採光原始資料：房間面積（m²）與每個門窗開口的寬、高、窗台高、窗頂高（mm）、是否外牆開口、所屬牆 ID。只回原始資料，不計算採光比例、不判定 PASS/FAIL；有效採光面積與比例請依 domain/daylight-area-check.md 計算（建築技術規則第 41 條）。",
         inputSchema: {
             type: "object",
             properties: {
