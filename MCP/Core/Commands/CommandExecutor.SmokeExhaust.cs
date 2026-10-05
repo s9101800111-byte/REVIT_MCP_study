@@ -897,12 +897,20 @@ namespace RevitMCP.Core
             double levelElevation = level.Elevation;
 
             // 判定樓層數（十層以上或以下有不同標準）
-            var allLevels = new FilteredElementCollector(doc)
+            // 只數「建築樓層」：地下層（標高 < 0，與本檔其他處同一慣例）與天花、女兒牆等參考標高不可計入，
+            // 否則有地下室的建築會被高估層數（例：B3 + 8F 會被算成第 11 層）。地下層以負數表示（B1 = -1）。
+            var stories = new FilteredElementCollector(doc)
                 .OfClass(typeof(Level))
                 .Cast<Level>()
-                .OrderBy(l => l.Elevation)
+                .Where(l =>
+                {
+                    Parameter p = l.get_Parameter(BuiltInParameter.LEVEL_IS_BUILDING_STORY);
+                    return p == null || p.AsInteger() == 1;
+                })
                 .ToList();
-            int floorNumber = allLevels.IndexOf(allLevels.First(l => l.Id == level.Id)) + 1;
+            int floorNumber = levelElevation >= 0
+                ? stories.Count(l => l.Elevation >= 0 && l.Elevation <= levelElevation)
+                : -stories.Count(l => l.Elevation < 0 && l.Elevation >= levelElevation);
             bool isAbove10F = floorNumber > 10;
 
             // 取得該樓層總地板面積
