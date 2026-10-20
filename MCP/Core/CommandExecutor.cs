@@ -202,6 +202,14 @@ namespace RevitMCP.Core
                     case "create_grids":
                         result = CreateGrids(parameters);
                         break;
+
+                    case "preview_dwg_grids":
+                        result = PreviewDwgGrids(parameters);
+                        break;
+
+                    case "create_grids_from_dwg":
+                        result = CreateGridsFromDwg(parameters);
+                        break;
                     
                     case "get_column_types":
                         result = GetColumnTypes(parameters);
