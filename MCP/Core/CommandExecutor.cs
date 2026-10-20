@@ -198,6 +198,10 @@ namespace RevitMCP.Core
                     case "get_all_grids":
                         result = GetAllGrids();
                         break;
+
+                    case "create_grids":
+                        result = CreateGrids(parameters);
+                        break;
                     
                     case "get_column_types":
                         result = GetColumnTypes(parameters);
