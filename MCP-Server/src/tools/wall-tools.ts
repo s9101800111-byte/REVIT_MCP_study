@@ -7,7 +7,7 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const wallTools: Tool[] = [
     {
         name: "create_wall",
-        description: "在 Revit 中建立一面牆。需要指定起點、終點座標和高度。",
+        description: "建立非結構直線牆，座標與高度為公釐。可明確指定樓層與基本牆類型；未指定樓層時使用目前平面視圖的樓層，無樓層則報錯。定位線為牆中心線、基準偏移為零。回傳值會揭露實際採用的樓層與牆類型（LevelSource / WallTypeSource）。",
         inputSchema: {
             type: "object",
             properties: {
@@ -15,21 +15,24 @@ export const wallTools: Tool[] = [
                 startY: { type: "number", description: "起點 Y 座標（公釐）" },
                 endX: { type: "number", description: "終點 X 座標（公釐）" },
                 endY: { type: "number", description: "終點 Y 座標（公釐）" },
-                height: { type: "number", description: "牆高度（公釐）", default: 3000 },
-                wallType: { type: "string", description: "牆類型名稱（選填）" },
+                height: { type: "number", exclusiveMinimum: 0, description: "牆不連續高度（公釐）", default: 3000 },
+                levelId: { type: "integer", minimum: 1, description: "基準樓層 ID（選填；與 levelName 同時提供時必須一致）" },
+                levelName: { type: "string", minLength: 1, description: "基準樓層完整名稱（選填；需唯一且完全相符，找不到就報錯）" },
+                wallTypeId: { type: "integer", minimum: 1, description: "基本牆類型 ID（選填；與 wallType 同時提供時必須一致）" },
+                wallType: { type: "string", minLength: 1, description: "基本牆類型完整名稱（選填；找不到或重名時報錯）" },
             },
             required: ["startX", "startY", "endX", "endY"],
         },
     },
     {
         name: "create_floor",
-        description: "在 Revit 中建立樓板。需要指定邊界點座標。",
+        description: "在 Revit 中建立樓板。需要指定邊界點座標。回傳值會揭露實際採用的樓層與樓板類型。",
         inputSchema: {
             type: "object",
             properties: {
                 points: { type: "array", description: "樓板邊界點陣列", items: { type: "object", properties: { x: { type: "number" }, y: { type: "number" } } } },
-                levelName: { type: "string", description: "樓層名稱", default: "Level 1" },
-                floorType: { type: "string", description: "樓板類型名稱（選填）" },
+                levelName: { type: "string", minLength: 1, description: "樓層名稱（找不到會退回最低樓層，並在回傳值的 Warning / LevelFellBackToLowest 回報）", default: "Level 1" },
+                floorType: { type: "string", minLength: 1, description: "樓板類型名稱（選填；可用「族群名: 類型名」。指定了卻找不到或重名會報錯，未指定則用專案預設並以 FloorTypeSource 回報）" },
             },
             required: ["points"],
         },
@@ -43,7 +46,7 @@ export const wallTools: Tool[] = [
                 wallId: { type: "number", description: "要放置門的牆 ID" },
                 locationX: { type: "number", description: "門在牆上的位置 X 座標（公釐）" },
                 locationY: { type: "number", description: "門在牆上的位置 Y 座標（公釐）" },
-                doorType: { type: "string", description: "門類型名稱（選填）" },
+                doorType: { type: "string", minLength: 1, description: "門類型名稱（選填；可用「族群名: 類型名」。指定了卻找不到或重名會報錯，不會自動換成別的類型）" },
                 sourceElementId: { type: "number", description: "來源門 ID（選填，用於複製其類型、參數與朝向）" },
             },
             required: ["wallId", "locationX", "locationY"],
@@ -58,7 +61,7 @@ export const wallTools: Tool[] = [
                 wallId: { type: "number", description: "要放置窗的牆 ID" },
                 locationX: { type: "number", description: "窗在牆上的位置 X 座標（公釐）" },
                 locationY: { type: "number", description: "窗在牆上的位置 Y 座標（公釐）" },
-                windowType: { type: "string", description: "窗類型名稱（選填）" },
+                windowType: { type: "string", minLength: 1, description: "窗類型名稱（選填；可用「族群名: 類型名」。指定了卻找不到或重名會報錯，不會自動換成別的類型）" },
                 sourceElementId: { type: "number", description: "來源窗 ID（選填，用於複製其類型、參數與朝向）" },
             },
             required: ["wallId", "locationX", "locationY"],
@@ -116,48 +119,30 @@ export const wallTools: Tool[] = [
         },
     },
     {
-        name: "unjoin_wall_joins",
-        description: "取消牆體與柱子等元素的幾何接合關係。常用於元素上色前的前置作業。",
-        inputSchema: {
-            type: "object",
-            properties: {
-                wallIds: { type: "array", items: { type: "number" }, description: "要取消接合的牆體 Element ID 列表" },
-                viewId: { type: "number", description: "視圖 ID" },
-            },
-        },
-    },
-    {
         name: "rejoin_wall_joins",
-        description: "恢復先前由 unjoin_wall_joins / unjoin_column_joins / unjoin_element_joins 取消的接合關係（共用 pair 儲存，限同一 Revit session）。",
+        description: "恢復先前由 unjoin_element_joins 取消的接合關係（共用 pair 儲存，限同一 Revit session）。",
         inputSchema: { type: "object", properties: {} },
     },
     {
-        name: "unjoin_column_joins",
-        description: "以柱子為中心解除其與鄰近元素的幾何接合，涵蓋牆、樓板、結構樑。未指定 columnIds 時預設整個專案所有柱（或 viewId 內的柱）。可用 rejoin_wall_joins 還原（限同一 Revit session）。",
-        inputSchema: {
-            type: "object",
-            properties: {
-                columnIds: { type: "array", items: { type: "number" }, description: "要處理的柱子 Element ID 列表（選填，預設為全部柱）" },
-                viewId: { type: "number", description: "視圖 ID（選填，未給 columnIds 時用來限縮範圍）" },
-            },
-        },
-    },
-    {
         name: "unjoin_element_joins",
-        description: "通用版：以任一類別為中心解除其與指定 target 類別的幾何接合。預設 target 為 8 類（Walls、Floors、Columns、StructuralColumns、StructuralFraming、StructuralFoundation、Roofs、Ceilings）。共用 _unjoinedPairs，可用 rejoin_wall_joins 還原（限同一 Revit session）。",
+        description: "以指定來源類別為中心，解除其與鄰近 target 類別元素的幾何接合（BoundingBox 外擴 1 ft 搜尋）。預設 target 為 8 類（Walls、Floors、Columns、StructuralColumns、StructuralFraming、StructuralFoundation、Roofs、Ceilings）。常見用法：牆-柱（上色前置）＝ sourceCategory: Walls、targetCategories: [Columns, StructuralColumns]；柱本位 ＝ sourceCategories: [Columns, StructuralColumns]、targetCategories: [Walls, Floors, StructuralFraming]。解除的配對存在同一份 session 儲存，可用 rejoin_wall_joins 還原（限同一 Revit session）。",
         inputSchema: {
             type: "object",
             properties: {
-                sourceCategory: { type: "string", description: "來源類別名稱（不含 OST_ 前綴，例如 StructuralFraming、Walls、Floors）" },
+                sourceCategory: { type: "string", description: "來源類別名稱（不含 OST_ 前綴，例如 StructuralFraming、Walls、Floors）。與 sourceCategories 擇一" },
+                sourceCategories: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "多個來源類別（例如 [\"Columns\", \"StructuralColumns\"] 一次涵蓋建築柱與結構柱）。與 sourceCategory 擇一",
+                },
                 targetCategories: {
                     type: "array",
                     items: { type: "string" },
                     description: "目標類別名稱陣列（選填，預設 8 類：Walls、Floors、Columns、StructuralColumns、StructuralFraming、StructuralFoundation、Roofs、Ceilings）",
                 },
-                elementIds: { type: "array", items: { type: "number" }, description: "要處理的來源 Element ID 列表（選填，預設為該類別全部）" },
+                elementIds: { type: "array", items: { type: "number" }, description: "要處理的來源 Element ID 列表（選填，預設為來源類別全部）" },
                 viewId: { type: "number", description: "視圖 ID（選填，未給 elementIds 時用來限縮範圍）" },
             },
-            required: ["sourceCategory"],
         },
     },
     {

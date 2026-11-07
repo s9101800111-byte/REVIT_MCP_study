@@ -133,7 +133,7 @@ namespace RevitMCP.Core
                     "這是系統族群，API 只能從既有類型複製，無法憑空建立。" +
                     "請先在 Revit 手動放一條（建築 → 牆 → 牆:飾條）或從其他專案 Transfer Project Standards，再重跑本工具。");
 
-            // 輪廓：必須在 Transaction 之外處理（NewFamilyDocument / LoadFamily 不可包在交易內）
+            // 輪廓：NewFamilyDocument / SaveAs 必須在 Transaction 之外；專案端 LoadFamily 在 CreateRectangleProfileFamily 內自開獨立交易
             FamilySymbol profileSymbol = ResolveSweepProfile(doc, parameters, availableProfiles, out string profileNote);
 
             // 來源類型：指定 baseTypeId 就用它，否則取第一個
@@ -168,6 +168,12 @@ namespace RevitMCP.Core
                         .FirstOrDefault(t => string.Equals(t.Name, newName, StringComparison.OrdinalIgnoreCase));
 
                     sweepType = sameName ?? baseType.Duplicate(newName) as ElementType;
+                    if (sameName != null && profileSymbol != null)
+                    {
+                        // 同名類型已存在：不改寫其輪廓，以免連動改變既有飾條
+                        profileNote += $" 類型「{newName}」已存在，未改寫其輪廓參數（避免變更既有飾條）；如需套用新輪廓請改用新的 typeName。";
+                        profileSymbol = null;
+                    }
                     if (sweepType == null)
                         throw new Exception($"複製{(isReveal ? "分隔縫" : "牆飾條")}類型「{baseType.Name}」失敗。");
                 }
@@ -286,7 +292,7 @@ namespace RevitMCP.Core
         }
 
         /// <summary>
-        /// 用輪廓族群樣板現做一個矩形輪廓並載入專案。必須在 Transaction 之外呼叫。
+        /// 用輪廓族群樣板現做一個矩形輪廓並載入專案。必須在外層 Transaction 之外呼叫（內部自開載入交易）。
         /// </summary>
         private FamilySymbol CreateRectangleProfileFamily(Document doc, string familyName, double widthMm, double depthMm)
         {
@@ -345,15 +351,24 @@ namespace RevitMCP.Core
             }
 
             Family loaded;
-            if (!doc.LoadFamily(rfaPath, out loaded) || loaded == null)
+            using (Transaction lt = new Transaction(doc, "載入矩形輪廓族群"))
             {
-                loaded = new FilteredElementCollector(doc)
-                    .OfClass(typeof(Family))
-                    .Cast<Family>()
-                    .FirstOrDefault(f => string.Equals(f.Name, familyName, StringComparison.OrdinalIgnoreCase));
+                lt.Start();
+                bool ok = doc.LoadFamily(rfaPath, out loaded);
+                if (!ok || loaded == null)
+                {
+                    loaded = new FilteredElementCollector(doc)
+                        .OfClass(typeof(Family))
+                        .Cast<Family>()
+                        .FirstOrDefault(f => string.Equals(f.Name, familyName, StringComparison.OrdinalIgnoreCase));
+                }
 
                 if (loaded == null)
+                {
+                    lt.RollBack();
                     throw new Exception($"輪廓族群「{familyName}」載入專案失敗。");
+                }
+                lt.Commit();
             }
 
             FamilySymbol symbol = loaded.GetFamilySymbolIds()
@@ -377,9 +392,7 @@ namespace RevitMCP.Core
 
             foreach (string guess in new[]
                      {
-                         @"C:\ProgramData\Autodesk\RVT 2026\Family Templates",
-                         @"C:\ProgramData\Autodesk\RVT 2025\Family Templates",
-                         @"C:\ProgramData\Autodesk\RVT 2024\Family Templates"
+                         $@"C:\ProgramData\Autodesk\RVT {_uiApp.Application.VersionNumber}\Family Templates"
                      })
             {
                 if (Directory.Exists(guess) && !roots.Contains(guess))

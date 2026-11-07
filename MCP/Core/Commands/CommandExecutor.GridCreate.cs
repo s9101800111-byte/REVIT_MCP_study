@@ -26,14 +26,22 @@ namespace RevitMCP.Core
                 throw new Exception("請提供 grids 陣列（每筆含 startX/startY/endX/endY，公釐）");
 
             var plans = new List<GridPlan>();
+            int gridIndex = 0;
             foreach (var it in items)
             {
+                double? sx = it["startX"]?.Value<double?>();
+                double? sy = it["startY"]?.Value<double?>();
+                double? ex = it["endX"]?.Value<double?>();
+                double? ey = it["endY"]?.Value<double?>();
+                if (sx == null || sy == null || ex == null || ey == null)
+                    throw new Exception($"grids[{gridIndex}] 缺少 startX/startY/endX/endY");
                 plans.Add(new GridPlan
                 {
                     Name = it["name"]?.Value<string>(),
-                    Start = new XYZ(it["startX"].Value<double>() / GridMmPerFt, it["startY"].Value<double>() / GridMmPerFt, 0),
-                    End = new XYZ(it["endX"].Value<double>() / GridMmPerFt, it["endY"].Value<double>() / GridMmPerFt, 0)
+                    Start = new XYZ(sx.Value / GridMmPerFt, sy.Value / GridMmPerFt, 0),
+                    End = new XYZ(ex.Value / GridMmPerFt, ey.Value / GridMmPerFt, 0)
                 });
+                gridIndex++;
             }
 
             var results = ApplyGridPlans(doc, plans, false, "建立網格線");

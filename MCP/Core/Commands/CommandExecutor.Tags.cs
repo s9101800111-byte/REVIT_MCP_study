@@ -180,7 +180,11 @@ namespace RevitMCP.Core
             object leaderEnd = null;
             try
             {
+#if REVIT2023_OR_GREATER
                 if (tag.HasLeader && tag.IsLeaderVisible(refr))
+#else
+                if (tag.HasLeader) // R22 API 無 IsLeaderVisible；GetLeaderEnd 失敗由 catch 吞掉
+#endif
                     leaderEnd = ToMm(tag.GetLeaderEnd(refr));
             }
             catch { }
